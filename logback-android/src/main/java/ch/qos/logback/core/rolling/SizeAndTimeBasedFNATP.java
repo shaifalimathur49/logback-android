@@ -22,9 +22,7 @@ import ch.qos.logback.core.rolling.helper.ArchiveRemover;
 import ch.qos.logback.core.rolling.helper.CompressionMode;
 import ch.qos.logback.core.rolling.helper.FileFilterUtil;
 import ch.qos.logback.core.rolling.helper.SizeAndTimeBasedArchiveRemover;
-import ch.qos.logback.core.util.DefaultInvocationGate;
 import ch.qos.logback.core.util.FileSize;
-import ch.qos.logback.core.util.InvocationGate;
 
 import static ch.qos.logback.core.CoreConstants.MANUAL_URL_PREFIX;
 
@@ -132,8 +130,6 @@ public class SizeAndTimeBasedFNATP<E> extends
     }
   }
 
-  InvocationGate invocationGate = new DefaultInvocationGate();
-
   @Override
   public boolean isTriggeringEvent(File activeFile, final E event) {
 
@@ -146,11 +142,6 @@ public class SizeAndTimeBasedFNATP<E> extends
       setDateInCurrentPeriod(time);
       computeNextCheck();
       return true;
-    }
-
-    // next check for roll-over based on size
-    if (invocationGate.isTooSoon(time)) {
-      return false;
     }
 
     if (activeFile == null) {

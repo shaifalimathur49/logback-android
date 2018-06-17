@@ -18,7 +18,6 @@ import ch.qos.logback.core.pattern.SpacePadder;
 import ch.qos.logback.core.rolling.helper.RollingCalendar;
 import ch.qos.logback.core.status.StatusChecker;
 import ch.qos.logback.core.util.FileSize;
-import ch.qos.logback.core.util.FixedRateInvocationGate;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -69,8 +68,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   int slashCount = 0;
   int ticksPerPeriod = 216;
   ConfigParameters cp; // initialized in setup
-
-  FixedRateInvocationGate fixedRateInvocationGate = new FixedRateInvocationGate(ticksPerPeriod/2);
 
   @Before
   public void setUp() {
@@ -243,7 +240,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   @Test
   public void dailySizeBasedRolloverWithoutCap() {
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
-    sizeAndTimeBasedFNATP.invocationGate = fixedRateInvocationGate;
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(10000));
     tbfnatp = sizeAndTimeBasedFNATP;
     this.slashCount = computeSlashCount(DAILY_DATE_PATTERN);
@@ -256,14 +252,12 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   @Test
   public void dailySizeBasedRolloverWithSizeCap() {
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
-    sizeAndTimeBasedFNATP.invocationGate = new FixedRateInvocationGate(ticksPerPeriod/8);
     long bytesPerPeriod = 17000;
     long fileSize = (bytesPerPeriod)/5;
     int expectedFileCount = 10;
     long sizeCap = expectedFileCount * fileSize;
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(fileSize));
     tbfnatp = sizeAndTimeBasedFNATP;
-    this.slashCount = computeSlashCount(DAILY_DATE_PATTERN);
 
     // 2016-03-05 00:14:39 CET
     long simulatedTime = 1457133279186L;
@@ -288,7 +282,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   public void dailyChronologSizeBasedRollover() {
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(10000));
-    sizeAndTimeBasedFNATP.invocationGate = fixedRateInvocationGate;
     tbfnatp = sizeAndTimeBasedFNATP;
     slashCount = 1;
     String fileNamePattern = randomOutputDir + "/%d{" + DAILY_DATE_PATTERN + "}/clean.%i.zip";
@@ -301,7 +294,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   public void dailyChronologSizeBasedRolloverWithSecondPhase() {
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(10000));
-    sizeAndTimeBasedFNATP.invocationGate = fixedRateInvocationGate;
     tbfnatp = sizeAndTimeBasedFNATP;
     this.slashCount = 1;
     String fileNamePattern = randomOutputDir + "/%d{" + DAILY_DATE_PATTERN + "}/clean.%i";
