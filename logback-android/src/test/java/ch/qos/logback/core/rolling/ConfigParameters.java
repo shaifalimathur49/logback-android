@@ -8,11 +8,17 @@ class ConfigParameters {
     int startInactivity = -1;
     int numInactivityPeriods;
     String fileNamePattern;
-    long periodDurationInMillis = TimeBasedRollingWithArchiveRemoval_Test.MILLIS_IN_DAY;
+    long periodDurationInMillis = -1;
     long sizeCap;
+    long bytesPerFile;
 
     ConfigParameters(long simulatedTime) {
         this.simulatedTime = simulatedTime;
+    }
+
+    ConfigParameters bytesPerFile(long bytesPerFile) {
+        this.bytesPerFile = bytesPerFile;
+        return this;
     }
 
     ConfigParameters maxHistory(int maxHistory) {

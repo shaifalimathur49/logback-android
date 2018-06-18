@@ -14,8 +14,6 @@
 package ch.qos.logback.core.rolling.helper;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -214,21 +212,24 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   public Future<?> cleanAsynchronously(Date now) {
-    ArhiveRemoverRunnable runnable = new ArhiveRemoverRunnable(now);
+    ArchiveRemoverRunnable runnable = new ArchiveRemoverRunnable(now);
     ExecutorService executorService = context.getScheduledExecutorService();
     Future<?> future = executorService.submit(runnable);
     return future;
   }
 
-  public class ArhiveRemoverRunnable implements Runnable {
-    Date now;
-    ArhiveRemoverRunnable(Date now) {
+  class ArchiveRemoverRunnable implements Runnable {
+    private Date now;
+    ArchiveRemoverRunnable(Date now) {
       this.now = now;
     }
 
     @Override
     public void run() {
+      // remove files from expired periods
       clean(now);
+
+      // remove files that exceed the total size limit
       if (totalSizeCap != UNBOUNDED_TOTAL_SIZE_CAP && totalSizeCap > 0) {
         capTotalSize(now);
       }
