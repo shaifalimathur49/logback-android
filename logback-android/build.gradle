@@ -10,8 +10,8 @@ android {
     compileSdkVersion 27
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_5
-        targetCompatibility JavaVersion.VERSION_1_5
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     defaultConfig {
@@ -76,7 +76,7 @@ dependencies {
     compileOnly 'com.sun.mail:android-activation:1.6.2'
 
     testImplementation 'ch.qos.cal10n:cal10n-api:0.8.1'
-    testAnnotationProcessor 'ch.qos.cal10n:cal10n-api:0.8.1'
+//    testAnnotationProcessor 'ch.qos.cal10n:cal10n-api:0.8.1'
 }
 
 allprojects {
