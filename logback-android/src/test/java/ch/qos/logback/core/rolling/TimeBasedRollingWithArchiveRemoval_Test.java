@@ -43,31 +43,30 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRollingTests {
-  String MONTHLY_CRONOLOG_DATE_PATTERN = "yyyy/MM";
-  final String DAILY_CRONOLOG_DATE_PATTERN = "yyyy/MM/dd";
+  private String MONTHLY_CRONOLOG_DATE_PATTERN = "yyyy/MM";
+  private final String DAILY_CRONOLOG_DATE_PATTERN = "yyyy/MM/dd";
 
-
-  RollingFileAppender<Object> rfa = new RollingFileAppender<Object>();
-  TimeBasedRollingPolicy<Object> tbrp = new TimeBasedRollingPolicy<Object>();
+  private RollingFileAppender<Object> rfa = new RollingFileAppender<Object>();
+  private TimeBasedRollingPolicy<Object> tbrp = new TimeBasedRollingPolicy<Object>();
 
   // by default tbfnatp is an instance of DefaultTimeBasedFileNamingAndTriggeringPolicy
-  TimeBasedFileNamingAndTriggeringPolicy<Object> tbfnatp = new DefaultTimeBasedFileNamingAndTriggeringPolicy<Object>();
+  private TimeBasedFileNamingAndTriggeringPolicy<Object> tbfnatp = new DefaultTimeBasedFileNamingAndTriggeringPolicy<Object>();
 
-  StatusChecker checker = new StatusChecker(context);
+  private StatusChecker checker = new StatusChecker(context);
 
-  static long MILLIS_IN_MINUTE = 60 * 1000;
-  static long MILLIS_IN_HOUR = 60 * MILLIS_IN_MINUTE;
-  static long MILLIS_IN_DAY = 24 * MILLIS_IN_HOUR;
-  static long MILLIS_IN_MONTH = (long) ((365.242199 / 12) * MILLIS_IN_DAY);
-  static int MONTHS_IN_YEAR = 12;
+  private static long MILLIS_IN_MINUTE = 60 * 1000;
+  private static long MILLIS_IN_HOUR = 60 * MILLIS_IN_MINUTE;
+  private static long MILLIS_IN_DAY = 24 * MILLIS_IN_HOUR;
+  private static long MILLIS_IN_MONTH = (long) ((365.242199 / 12) * MILLIS_IN_DAY);
+  private static int MONTHS_IN_YEAR = 12;
 
   // Wed Mar 23 23:07:05 CET 2016
-  static final long WED_2016_03_23_T_230705_CET = 1458770825333L;
-  static final long THU_2016_03_17_T_230330_CET = 1458252210975L;
+  private static final long WED_2016_03_23_T_230705_CET = 1458770825333L;
+  private static final long THU_2016_03_17_T_230330_CET = 1458252210975L;
 
-  int slashCount = 0;
-  int ticksPerPeriod = 216;
-  ConfigParameters cp; // initialized in setup
+  private int slashCount = 0;
+  private int ticksPerPeriod = 216;
+  private ConfigParameters cp; // initialized in setup
 
   @Before
   public void setUp() {
@@ -113,13 +112,13 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     checkFileCount(expectedCountWithFolders(maxHistory, withExtraFolder));
   }
 
-  long generateDailyRollover(ConfigParameters cp) {
+  private long generateDailyRollover(ConfigParameters cp) {
     this.slashCount = computeSlashCount(DAILY_DATE_PATTERN);
     cp.fileNamePattern(randomOutputDir + "clean-%d{" + DAILY_DATE_PATTERN + "}.txt");
     return logOverMultiplePeriods(cp);
   }
 
-  long generateDailyRolloverAndCheckFileCount(ConfigParameters cp) {
+  private long generateDailyRolloverAndCheckFileCount(ConfigParameters cp) {
     long millisAtEnd = generateDailyRollover(cp);
     int periodBarriersCrossed = computeCrossedDayBarriers(currentTime, millisAtEnd);
     checkFileCount(expectedCountWithoutFoldersWithInactivity(cp.maxHistory, periodBarriersCrossed, cp.startInactivity + cp.numInactivityPeriods));
@@ -309,7 +308,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   }
 
 
-  void logTwiceAndStop(long currentTime, String fileNamePattern, int maxHistory, long timePeriod) {
+  private void logTwiceAndStop(long currentTime, String fileNamePattern, int maxHistory, long timePeriod) {
     ConfigParameters params = new ConfigParameters(currentTime).fileNamePattern(fileNamePattern).maxHistory(maxHistory);
     buildRollingFileAppender(params, DO_CLEAN_HISTORY_ON_START);
     rfa.doAppend("Hello ----------------------------------------------------------" + new Date(currentTime));
@@ -366,12 +365,11 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     checkFileCount(expectedCountWithoutFolders(maxHistory));
   }
 
-  int expectedCountWithoutFolders(int maxHistory) {
+  private int expectedCountWithoutFolders(int maxHistory) {
     return maxHistory + 1;
   }
 
-
-  int expectedCountWithFolders(int maxHistory, boolean withExtraFolder) {
+  private int expectedCountWithFolders(int maxHistory, boolean withExtraFolder) {
     int numLogFiles = (maxHistory + 1);
     int numLogFilesAndFolders = numLogFiles * 2;
     int result = numLogFilesAndFolders + slashCount;
@@ -379,7 +377,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     return result;
   }
 
-  void buildRollingFileAppender(ConfigParameters cp, boolean cleanHistoryOnStart) {
+  private void buildRollingFileAppender(ConfigParameters cp, boolean cleanHistoryOnStart) {
     rfa.setContext(context);
     rfa.setEncoder(encoder);
     tbrp.setContext(context);
@@ -395,10 +393,10 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     rfa.start();
   }
 
-  boolean DO_CLEAN_HISTORY_ON_START = true;
-  boolean DO_NOT_CLEAN_HISTORY_ON_START = false;
+  private boolean DO_CLEAN_HISTORY_ON_START = true;
+  private boolean DO_NOT_CLEAN_HISTORY_ON_START = false;
 
-  long logOverMultiplePeriods(ConfigParameters cp) {
+  private long logOverMultiplePeriods(ConfigParameters cp) {
     buildRollingFileAppender(cp, DO_NOT_CLEAN_HISTORY_ON_START);
     int runLength = cp.simulatedNumberOfPeriods * ticksPerPeriod;
     int startInactivityIndex = cp.startInactivity * ticksPerPeriod;
@@ -433,17 +431,17 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     return tbrp.timeBasedFileNamingAndTriggeringPolicy.getCurrentTime();
   }
 
-  boolean extraFolder(int numPeriods, int periodsPerEra, int beginPeriod, int maxHistory) {
+  private boolean extraFolder(int numPeriods, int periodsPerEra, int beginPeriod, int maxHistory) {
     int valueOfLastMonth = ((beginPeriod) + numPeriods) % periodsPerEra;
     return (valueOfLastMonth < maxHistory);
   }
 
-  long addTime(long time, long timeToWait) {
+  private long addTime(long time, long timeToWait) {
     return time + timeToWait;
   }
 
 
-  void expectedFileAndDirCount(int expectedFileAndDirCount, int expectedDirCountMin, int expectedDirCountMax) {
+  private void expectedFileAndDirCount(int expectedFileAndDirCount, int expectedDirCountMin, int expectedDirCountMax) {
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findFilesInFolderRecursivelyByPatterMatch(dir, fileList, "clean");
@@ -453,14 +451,14 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     assertTrue(msg, expectedDirCountMin <= dirList.size() && dirList.size() <= expectedDirCountMax);
   }
 
-  void checkFileCount(int expectedCount) {
+  private void checkFileCount(int expectedCount) {
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findAllDirsOrStringContainsFilesRecursively(dir, fileList, "clean");
     assertEquals(expectedCount, fileList.size());
   }
 
-  void checkFileCountAtMost(int expectedCount) {
+  private void checkFileCountAtMost(int expectedCount) {
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findAllDirsOrStringContainsFilesRecursively(dir, fileList, "clean");
@@ -469,13 +467,13 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     assertTrue("file list size " + fileListSize + ", expectedCount=" + expectedCount, fileListSize <= expectedCount);
   }
 
-  int expectedCountWithoutFoldersWithInactivity(int maxHistory, int totalPeriods, int endOfInactivity) {
+  private int expectedCountWithoutFoldersWithInactivity(int maxHistory, int totalPeriods, int endOfInactivity) {
     int availableHistory = (totalPeriods + 1) - endOfInactivity;
     int actualHistory = Math.min(availableHistory, maxHistory + 1);
     return actualHistory;
   }
 
-  void genericFindMatching(final FileMatchFunction matchFunc, File dir, List<File> fileList, final String pattern, boolean includeDirs) {
+  private void genericFindMatching(final FileMatchFunction matchFunc, File dir, List<File> fileList, final String pattern, boolean includeDirs) {
     if (dir.isDirectory()) {
       File[] matchArray = dir.listFiles(new FileFilter() {
         public boolean accept(File f) {
@@ -510,7 +508,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     genericFindMatching(matchFunction, dir, fileList, pattern, true);
   }
 
-  void findFilesInFolderRecursivelyByPatterMatch(File dir, List<File> fileList, String pattern) {
+  private void findFilesInFolderRecursivelyByPatterMatch(File dir, List<File> fileList, String pattern) {
     FileMatchFunction matchByPattern = new FileMatchFunction() {
       public boolean match(File f, String pattern) {
         return f.getName().matches(pattern);
@@ -519,7 +517,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     genericFindMatching(matchByPattern, dir, fileList, pattern, false);
   }
 
-  Set<String> groupByClass(List<File> fileList, String regex) {
+  private Set<String> groupByClass(List<File> fileList, String regex) {
     Pattern p = Pattern.compile(regex);
     Set<String> set = new HashSet<String>();
     for (File f : fileList) {
@@ -534,7 +532,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   }
 
 
-  void checkPatternCompliance(int expectedClassCount, String regex) {
+  private void checkPatternCompliance(int expectedClassCount, String regex) {
     Set<String> set = findFilesByPatternClass(regex);
     assertEquals(expectedClassCount, set.size());
   }
@@ -552,7 +550,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     return set;
   }
 
-  void checkDirPatternCompliance(int expectedClassCount) {
+  private void checkDirPatternCompliance(int expectedClassCount) {
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findAllFoldersInFolderRecursively(dir, fileList);
