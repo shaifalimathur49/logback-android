@@ -16,7 +16,6 @@ package ch.qos.logback.core.rolling;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.pattern.SpacePadder;
 import ch.qos.logback.core.rolling.helper.RollingCalendar;
-import ch.qos.logback.core.status.StatusChecker;
 import ch.qos.logback.core.util.FileSize;
 
 import org.junit.Before;
@@ -51,8 +50,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   // by default tbfnatp is an instance of DefaultTimeBasedFileNamingAndTriggeringPolicy
   private TimeBasedFileNamingAndTriggeringPolicy<Object> tbfnatp = new DefaultTimeBasedFileNamingAndTriggeringPolicy<Object>();
-
-  private StatusChecker checker = new StatusChecker(context);
 
   private static long MILLIS_IN_MINUTE = 60 * 1000;
   private static long MILLIS_IN_HOUR = 60 * MILLIS_IN_MINUTE;
@@ -171,8 +168,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   @Test
   public void checkThatSmallTotalSizeCapLeavesAtLeastOneArhcive() {
     long WED_2016_03_23_T_131345_CET = WED_2016_03_23_T_230705_CET - 10 * CoreConstants.MILLIS_IN_ONE_HOUR;
-
-    //long bytesOutputPerPeriod = 15984;
 
     cp = new ConfigParameters(WED_2016_03_23_T_131345_CET);
     final int verySmallCapSize = 1;
@@ -342,24 +337,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     for (int i = 0; i <= 5; i++) {
       logTwiceAndStop(simulatedTime, fileNamePattern, maxHistory, MILLIS_IN_HOUR);
       simulatedTime += MILLIS_IN_HOUR;
-    }
-    //StatusPrinter.print(context);
-    checkFileCount(expectedCountWithoutFolders(maxHistory));
-  }
-
-  @Ignore
-  @Test
-  // this test assumes a high degree of collisions in the archived files. Every 24 hours, the archive
-  // belonging to the previous day will be overwritten. Given that logback goes 14 days (336 hours) in history
-  // to clean files on start up, it is bound to delete more recent files. It is not logback's responsibility
-  // to cater for such degenerate cases.
-  public void cleanHistoryOnStartWithHourPattern() {
-    long now = this.currentTime;
-    String fileNamePattern = randomOutputDir + "clean-%d{HH}.txt";
-    int maxHistory = 3;
-    for (int i = 0; i <= 5; i++) {
-      logTwiceAndStop(now, fileNamePattern, maxHistory, MILLIS_IN_HOUR);
-      now = now + MILLIS_IN_HOUR;
     }
     //StatusPrinter.print(context);
     checkFileCount(expectedCountWithoutFolders(maxHistory));
