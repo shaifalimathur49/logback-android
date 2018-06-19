@@ -44,10 +44,6 @@ public class EventArgUtil {
     return trimmed;
   }
 
-  public static Object[] arrangeArguments(Object[] argArray) {
-    return argArray;
-  }
-
   public static boolean successfulExtraction(Throwable throwable) {
     return throwable != null;
   }
