@@ -12,7 +12,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ClassPackagingData;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggerContextVO;
-import ch.qos.logback.classic.spi.LoggerRemoteView;
 import ch.qos.logback.classic.spi.LoggingEventVO;
 import ch.qos.logback.classic.spi.StackTraceElementProxy;
 import ch.qos.logback.classic.spi.ThrowableProxy;
@@ -25,7 +24,6 @@ public class HardenedLoggingEventInputStream extends HardenedObjectInputStream {
         List<String> whitelist = new ArrayList<String>();
         whitelist.add(LoggingEventVO.class.getName());
         whitelist.add(LoggerContextVO.class.getName());
-        whitelist.add(LoggerRemoteView.class.getName());
         whitelist.add(ThrowableProxyVO.class.getName());
         whitelist.add(BasicMarker.class.getName());
         whitelist.add(Level.class.getName());
