@@ -7,6 +7,7 @@ import java.util.List;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.core.CoreConstants;
+import ch.qos.logback.core.android.AndroidContextUtil;
 import ch.qos.logback.core.joran.event.SaxEvent;
 import ch.qos.logback.core.joran.spi.ConfigurationWatchList;
 import ch.qos.logback.core.joran.spi.JoranException;
@@ -94,12 +95,13 @@ public class ReconfigureOnChangeTask extends ContextAwareBase implements Runnabl
 
     private void performXMLConfiguration(LoggerContext lc, URL mainConfigurationURL) {
         JoranConfigurator jc = new JoranConfigurator();
-        jc.setContext(context);
-        StatusUtil statusUtil = new StatusUtil(context);
+        jc.setContext(lc);
+        StatusUtil statusUtil = new StatusUtil(lc);
         List<SaxEvent> eventList = jc.recallSafeConfiguration();
 
-        URL mainURL = ConfigurationWatchListUtil.getMainWatchURL(context);
+        URL mainURL = ConfigurationWatchListUtil.getMainWatchURL(lc);
         lc.reset();
+        new AndroidContextUtil().setupProperties(lc);
         long threshold = System.currentTimeMillis();
         try {
             jc.doConfigure(mainConfigurationURL);
@@ -130,8 +132,8 @@ public class ReconfigureOnChangeTask extends ContextAwareBase implements Runnabl
 
         List<SaxEvent> failsafeEvents = removeIncludeEvents(eventList);
         JoranConfigurator joranConfigurator = new JoranConfigurator();
-        joranConfigurator.setContext(context);
-        ConfigurationWatchList oldCWL = ConfigurationWatchListUtil.getConfigurationWatchList(context);
+        joranConfigurator.setContext(lc);
+        ConfigurationWatchList oldCWL = ConfigurationWatchListUtil.getConfigurationWatchList(lc);
         ConfigurationWatchList newCWL = oldCWL.buildClone();
 
         if (failsafeEvents == null || failsafeEvents.isEmpty()) {
@@ -140,7 +142,8 @@ public class ReconfigureOnChangeTask extends ContextAwareBase implements Runnabl
             addWarn(FALLING_BACK_TO_SAFE_CONFIGURATION);
             try {
                 lc.reset();
-                ConfigurationWatchListUtil.registerConfigurationWatchList(context, newCWL);
+                new AndroidContextUtil().setupProperties(lc);
+                ConfigurationWatchListUtil.registerConfigurationWatchList(lc, newCWL);
                 joranConfigurator.doConfigure(failsafeEvents);
                 addInfo(RE_REGISTERING_PREVIOUS_SAFE_CONFIGURATION);
                 joranConfigurator.registerSafeConfiguration(eventList);
