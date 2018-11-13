@@ -74,16 +74,14 @@ public class RollingCalendar extends GregorianCalendar {
     Date epoch = new Date(0);
 
     if (datePattern != null) {
+      SimpleDateFormat simpleDateFormat = new SimpleDateFormat(datePattern, Locale.US);
+      simpleDateFormat.setTimeZone(GMT_TIMEZONE); // all date formatting done in GMT
+
       for (PeriodicityType i : PeriodicityType.VALID_ORDERED_LIST) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(datePattern, Locale.US);
-        simpleDateFormat.setTimeZone(GMT_TIMEZONE); // all date formatting done in GMT
-
         String r0 = simpleDateFormat.format(epoch);
-
         Date next = innerGetEndOfThisPeriod(calendar, i, epoch);
         String r1 = simpleDateFormat.format(next);
 
-        // System.out.println("Type = "+i+", r0 = "+r0+", r1 = "+r1);
         if ((r0 != null) && (r1 != null) && !r0.equals(r1)) {
           return i;
         }
