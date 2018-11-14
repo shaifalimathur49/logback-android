@@ -34,6 +34,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.io.SAXReader;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
@@ -56,6 +57,7 @@ import static org.junit.Assert.*;
  *
  * http://www.icegreen.com/greenmail/
  */
+@Ignore
 @RunWith(RobolectricTestRunner.class)
 public class SMTPAppender_GreenTest {
 
