@@ -1,5 +1,6 @@
 package ch.qos.logback.core.rolling.helper;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -14,58 +15,58 @@ import ch.qos.logback.classic.LoggerContext;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 public class TimeBasedArchiveRemoverTest {
 
-  @Test
-  public void rolloverDailyFileRemovesExpiredFiles() throws ParseException {
+  private TimeBasedArchiveRemover remover;
+  private final String CLEAN_DATE = "2018/11/04";
+  private final File RECENT_FILE = new File("20181105.log");
+  private final File[] EXPIRED_FILES = new File[]{
+    new File("20181102.log"),
+    new File("20181103.log"),
+    new File("20181104.log")
+  };
+  private final File[] DUMMY_FILES = new File[] {
+    EXPIRED_FILES[0],
+    EXPIRED_FILES[1],
+    EXPIRED_FILES[2],
+    RECENT_FILE
+  };
+
+  @Before
+  public void clean() throws ParseException {
     final String DATE_PATTERN = "yyyyMMdd";
     final String FILENAME_PATTERN = "%d{" + DATE_PATTERN + "}.log";
     final LoggerContext context = new LoggerContext();
     final RollingCalendar rollingCalendar = new RollingCalendar(DATE_PATTERN);
-    final TimeBasedArchiveRemover remover = spy(new TimeBasedArchiveRemover(new FileNamePattern(FILENAME_PATTERN, context), rollingCalendar));
-    final File[] dummyFiles = new File[] {
-      new File("20181101.log"),
-      new File("20181102.log"),
-      new File("20181103.log"),
-      new File("20181104.log")
-    };
 
-    doReturn(true).when(remover).delete(any(File.class));
-    doReturn(dummyFiles).when(remover).getFilesInPeriod(any(Date.class));
+    this.remover = spy(new TimeBasedArchiveRemover(new FileNamePattern(FILENAME_PATTERN, context), rollingCalendar));
 
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
+    doReturn(true).when(this.remover).delete(any(File.class));
+    doReturn(this.DUMMY_FILES).when(this.remover).getFilesInPeriod(any(Date.class));
+
+    final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-    Date date = dateFormat.parse("2018/11/04");
-    remover.clean(date);
+    this.remover.clean(dateFormat.parse(this.CLEAN_DATE));
+  }
 
-    verify(remover, atLeastOnce()).getFilesInPeriod(any(Date.class));
+  @Test
+  public void cleanCalculatesExpiredFiles() {
+    verify(this.remover, atLeastOnce()).getFilesInPeriod(any(Date.class));
+  }
 
-    for (File f : dummyFiles) {
-      verify(remover, atLeastOnce()).delete(f);
+  @Test
+  public void cleanRemovesExpiredFiles() {
+    for (File f : this.EXPIRED_FILES) {
+      verify(this.remover, atLeastOnce()).delete(f);
     }
   }
 
   @Test
-  public void rolloverDailyFileRemovesExpiredFilesButKeepsMaxHistory() {
-
+  public void cleanKeepsRecentFiles() {
+    verify(this.remover, never()).delete(this.RECENT_FILE);
   }
-
-  @Test
-  public void rolloverDailyDirectoryRemovesExpiredFiles() {
-    final String FILENAME_PATTERN = "%d{yyyyMMdd}/app.log";
-  }
-
-  @Test
-  public void rolloverDailyDirectoryRemovesEmptyDirectory() {
-    final String FILENAME_PATTERN = "%d{yyyyMMdd}/app.log";
-  }
-
-  @Test
-  public void rolloverDailyDirectoryDoesNotRemoveNonEmptyDirectory() {
-    final String FILENAME_PATTERN = "%d{yyyyMMdd}/app.log";
-  }
-
 }
