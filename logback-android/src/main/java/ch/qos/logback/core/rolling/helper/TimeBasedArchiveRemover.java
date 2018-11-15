@@ -14,8 +14,6 @@
 package ch.qos.logback.core.rolling.helper;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -81,7 +79,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
 
     for (File f : matchingFileArray) {
       addInfo("deleting " + f);
-      if (!f.delete()) {
+      if (!delete(f)) {
         addError("unspecified error occurred while deleting " + f);
       }
     }
@@ -90,6 +88,11 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
       File parentDir = getParentDir(matchingFileArray[0]);
       removeFolderIfEmpty(parentDir);
     }
+  }
+
+  //@VisibleForTest
+  boolean delete(File file) {
+    return file.delete();
   }
 
   private void capTotalSize(Date now) {
@@ -104,7 +107,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
         if (totalSize + size > totalSizeCap) {
           addInfo("Deleting [" + f + "]" + " of size " + new FileSize(size));
           totalRemoved += size;
-          f.delete();
+          delete(f);
         }
         totalSize += size;
       }
@@ -192,7 +195,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     }
     if (dir.isDirectory() && FileFilterUtil.isEmptyDirectory(dir)) {
       addInfo("deleting folder [" + dir + "]");
-      dir.delete();
+      delete(dir);
       removeFolderIfEmpty(dir.getParentFile(), depth + 1);
     }
   }
@@ -234,5 +237,4 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
       }
     }
   }
-
 }
