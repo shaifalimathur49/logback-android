@@ -13,8 +13,10 @@
  */
 package ch.qos.logback.core.rolling.helper;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import ch.qos.logback.core.Context;
@@ -218,6 +220,10 @@ public class FileNamePattern extends ContextAwareBase {
    * Given date, convert this instance to a regular expression
    */
   public String toRegex() {
+    return toRegex(false);
+  }
+
+  public String toRegex(boolean capturePrimaryDate) {
     StringBuilder buf = new StringBuilder();
     Converter<Object> p = headTokenConverter;
     while (p != null) {
@@ -227,7 +233,11 @@ public class FileNamePattern extends ContextAwareBase {
         buf.append("\\d+");
       } else if (p instanceof DateTokenConverter) {
         DateTokenConverter<Object> dtc = (DateTokenConverter<Object>) p;
-        buf.append(dtc.toRegex());
+        if (capturePrimaryDate && dtc.isPrimary()) {
+          buf.append("(").append(dtc.toRegex()).append(")");
+        } else {
+          buf.append(dtc.toRegex());
+        }
       }
       p = p.getNext();
     }

@@ -4,8 +4,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -35,28 +37,40 @@ public class TimeBasedArchiveRemoverTest {
     EXPIRED_FILES[2],
     RECENT_FILE
   };
+  private final String TIMEZONE_NAME = "GMT";
 
   @Before
   public void clean() throws ParseException {
     final String DATE_PATTERN = "yyyyMMdd";
-    final String FILENAME_PATTERN = "%d{" + DATE_PATTERN + "}.log";
+    final String FILENAME_PATTERN = "%d{" + DATE_PATTERN + ", " + this.TIMEZONE_NAME + "}.log";
     final LoggerContext context = new LoggerContext();
     final RollingCalendar rollingCalendar = new RollingCalendar(DATE_PATTERN);
+    final File[] FILES = this.DUMMY_FILES;
 
-    this.remover = spy(new TimeBasedArchiveRemover(new FileNamePattern(FILENAME_PATTERN, context), rollingCalendar));
+    this.remover = spy(new TimeBasedArchiveRemover(new FileNamePattern(FILENAME_PATTERN, context), rollingCalendar, new FileProvider() {
+      public File[] list(File dir, FilenameFilter filter) {
+        ArrayList<File> foundFiles = new ArrayList<File>();
+        for (File f : FILES) {
+          if (filter.accept(f.getParentFile(), f.getName())) {
+            foundFiles.add(f);
+          }
+        }
+        return foundFiles.toArray(new File[foundFiles.size()]);
+      }
+    }));
 
     doReturn(true).when(this.remover).delete(any(File.class));
-    doReturn(this.DUMMY_FILES).when(this.remover).getFilesInPeriod(any(Date.class));
+//    doReturn(this.DUMMY_FILES).when(this.remover).getFilesInPeriod(any(Date.class));
 
     final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
-    dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+    dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));
     this.remover.clean(dateFormat.parse(this.CLEAN_DATE));
   }
 
-  @Test
-  public void cleanCalculatesExpiredFiles() {
-    verify(this.remover, atLeastOnce()).getFilesInPeriod(any(Date.class));
-  }
+//  @Test
+//  public void cleanCalculatesExpiredFiles() {
+//    verify(this.remover, atLeastOnce()).getFilesInPeriod(any(Date.class));
+//  }
 
   @Test
   public void cleanRemovesExpiredFiles() {

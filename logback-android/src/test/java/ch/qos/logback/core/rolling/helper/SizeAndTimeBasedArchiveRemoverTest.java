@@ -20,7 +20,7 @@ public class SizeAndTimeBasedArchiveRemoverTest {
     @Test
     public void smoke() {
         FileNamePattern fileNamePattern = new FileNamePattern("smoke-%d-%i.gz", context);
-        SizeAndTimeBasedArchiveRemover remover = new SizeAndTimeBasedArchiveRemover(fileNamePattern, null);
+        SizeAndTimeBasedArchiveRemover remover = new SizeAndTimeBasedArchiveRemover(fileNamePattern, null, new DefaultFileProvider());
         File[] fileArray = new File[2];
         File[] expected = new File[2];
 
@@ -38,7 +38,7 @@ public class SizeAndTimeBasedArchiveRemoverTest {
     @Test
     public void badFilenames() {
         FileNamePattern fileNamePattern = new FileNamePattern("smoke-%d-%i.gz", context);
-        SizeAndTimeBasedArchiveRemover remover = new SizeAndTimeBasedArchiveRemover(fileNamePattern, null);
+        SizeAndTimeBasedArchiveRemover remover = new SizeAndTimeBasedArchiveRemover(fileNamePattern, null, new DefaultFileProvider());
         File[] fileArray = new File[2];
         File[] expected = new File[2];
 

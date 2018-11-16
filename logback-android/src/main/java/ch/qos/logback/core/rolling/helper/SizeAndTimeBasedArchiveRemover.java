@@ -24,8 +24,8 @@ public class SizeAndTimeBasedArchiveRemover extends TimeBasedArchiveRemover {
 
   protected static final int NO_INDEX = -1;
 
-  public SizeAndTimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc) {
-    super(fileNamePattern, rc);
+  public SizeAndTimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
+    super(fileNamePattern, rc, fileProvider);
   }
 
   @Override
