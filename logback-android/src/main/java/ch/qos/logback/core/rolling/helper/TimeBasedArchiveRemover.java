@@ -104,12 +104,10 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     });
 
     for (File f : filesToDelete) {
-      if (!delete(f)) {
-        addWarn("cannot delete " + f);
-      }
+      delete(f);
     }
 
-    if (this.parentClean) {
+    if (this.parentClean && (parentDir.list().length == 0)) {
       delete(parentDir);
     }
   }
@@ -145,7 +143,11 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
 
   //@VisibleForTest
   boolean delete(File file) {
-    return file.delete();
+    boolean ok = file.delete();
+    if (!ok) {
+      addWarn("cannot delete " + file);
+    }
+    return ok;
   }
 
   private void capTotalSize(Date now) {
@@ -160,7 +162,9 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
         if (totalSize + size > totalSizeCap) {
           addInfo("Deleting [" + f + "]" + " of size " + new FileSize(size));
           totalRemoved += size;
-          delete(f);
+          if (!delete(f)) {
+            size = 0;
+          }
         }
         totalSize += size;
       }
