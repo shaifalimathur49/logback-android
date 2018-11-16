@@ -8,7 +8,6 @@ import java.io.FilenameFilter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -25,17 +24,19 @@ public class TimeBasedArchiveRemoverTest {
 
   private TimeBasedArchiveRemover remover;
   private final String CLEAN_DATE = "2018/11/04";
-  private final File RECENT_FILE = new File("20181105.log");
+  private final File[] RECENT_FILES = new File[] {
+    new File("20181104.log"),
+    new File("20181105.log")
+  };
   private final File[] EXPIRED_FILES = new File[]{
     new File("20181102.log"),
-    new File("20181103.log"),
-    new File("20181104.log")
+    new File("20181103.log")
   };
   private final File[] DUMMY_FILES = new File[] {
     EXPIRED_FILES[0],
     EXPIRED_FILES[1],
-    EXPIRED_FILES[2],
-    RECENT_FILE
+    RECENT_FILES[0],
+    RECENT_FILES[1]
   };
   private final String TIMEZONE_NAME = "GMT";
 
@@ -81,6 +82,8 @@ public class TimeBasedArchiveRemoverTest {
 
   @Test
   public void cleanKeepsRecentFiles() {
-    verify(this.remover, never()).delete(this.RECENT_FILE);
+    for (File f : this.RECENT_FILES) {
+      verify(this.remover, never()).delete(f);
+    }
   }
 }
