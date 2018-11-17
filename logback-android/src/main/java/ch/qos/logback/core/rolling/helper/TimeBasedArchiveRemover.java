@@ -33,17 +33,11 @@ import ch.qos.logback.core.util.FileSize;
 
 public class TimeBasedArchiveRemover extends ContextAwareBase implements ArchiveRemover {
 
-//  static private final long UNINITIALIZED = -1;
-//  // aim for 32 days, except in case of hourly rollover
-//  static private final long INACTIVITY_TOLERANCE_IN_MILLIS = 32L * (long) CoreConstants.MILLIS_IN_ONE_DAY;
-//  static private final int MAX_VALUE_FOR_INACTIVITY_PERIODS = 14 * 24; // 14 days in case of hourly rollover
-
   private final FileNamePattern fileNamePattern;
   private final RollingCalendar rc;
   private int maxHistory = CoreConstants.UNBOUND_HISTORY;
   private long totalSizeCap = CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP;
   private final boolean parentClean;
-//  private long lastHeartBeat = UNINITIALIZED;
   private final FileProvider fileProvider;
 
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
@@ -53,20 +47,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     this.fileProvider = fileProvider;
   }
 
-  public void clean(Date now) {
-//    long nowInMillis = now.getTime();
-//    // for a live appender periodsElapsed is usually one
-//    int periodsElapsed = computeElapsedPeriodsSinceLastClean(nowInMillis);
-//    lastHeartBeat = nowInMillis;
-//    if (periodsElapsed > 1) {
-//      addInfo("Multiple periods, i.e. " + periodsElapsed + " periods, seem to have elapsed. This is expected at application start.");
-//    }
-//    for (int i = 0; i < periodsElapsed; i++) {
-//      int offset = getPeriodOffsetForDeletionTarget() - i;
-//      Date dateOfPeriodToClean = rc.getEndOfNextNthPeriod(now, offset);
-//      cleanPeriod(dateOfPeriodToClean);
-//    }
-
+  public void clean(final Date now) {
     final DateTokenConverter<Object> dateStringConverter = this.fileNamePattern.getPrimaryDateTokenConverter();
     final String datePattern = dateStringConverter.getDatePattern();
     final SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern, Locale.US);
@@ -74,7 +55,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     if (timeZone != null) {
       dateFormatter.setTimeZone(timeZone);
     }
-    final Date cutoffDate = now;
 
     final Pattern pathPattern = Pattern.compile(this.fileNamePattern.toRegex(true));
     File resolvedFile = new File(this.fileNamePattern.convertMultipleArguments(now, 0));
@@ -92,7 +72,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
           String dateString = m.group(1);
           try {
             Date fileDate = dateFormatter.parse(dateString);
-            isExpiredFile = fileDate.compareTo(cutoffDate) < 0;
+            isExpiredFile = fileDate.compareTo(now) < 0;
           } catch (ParseException e) {
             e.printStackTrace();
           }
@@ -122,22 +102,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     String regex = fileNamePattern.toRegexForFixedDate(dateOfPeriodToClean);
     return FileFilterUtil.afterLastSlash(regex);
   }
-
-//  private void cleanPeriod(Date dateOfPeriodToClean) {
-//    File[] matchingFileArray = getFilesInPeriod(dateOfPeriodToClean);
-//
-//    for (File f : matchingFileArray) {
-//      addInfo("deleting " + f);
-//      if (!delete(f)) {
-//        addError("unspecified error occurred while deleting " + f);
-//      }
-//    }
-//
-//    if (parentClean && matchingFileArray.length > 0) {
-//      File parentDir = getParentDir(matchingFileArray[0]);
-//      removeFolderIfEmpty(parentDir);
-//    }
-//  }
 
   //@VisibleForTest
   boolean delete(File file) {
@@ -173,25 +137,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   protected void descendingSort(File[] matchingFileArray, Date date) {
     // nothing to do in super class
   }
-
-//  protected File getParentDir(File file) {
-//    File absolute = file.getAbsoluteFile();
-//    File parentDir = absolute.getParentFile();
-//    return parentDir;
-//  }
-
-//  private int computeElapsedPeriodsSinceLastClean(long nowInMillis) {
-//    long periodsElapsed = 0;
-//    if (lastHeartBeat == UNINITIALIZED) {
-//      addInfo("first clean up after appender initialization");
-//      periodsElapsed = rc.periodBarriersCrossed(nowInMillis, nowInMillis + INACTIVITY_TOLERANCE_IN_MILLIS);
-//      periodsElapsed = Math.min(periodsElapsed, MAX_VALUE_FOR_INACTIVITY_PERIODS);
-//    } else {
-//      periodsElapsed = rc.periodBarriersCrossed(lastHeartBeat, nowInMillis);
-//      // periodsElapsed of zero is possible for Size and time based policies
-//    }
-//    return (int) periodsElapsed;
-//  }
 
   /**
    * Computes whether the fileNamePattern may create sub-folders.
@@ -234,10 +179,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   public void setMaxHistory(int maxHistory) {
     this.maxHistory = maxHistory;
   }
-
-//  private int getPeriodOffsetForDeletionTarget() {
-//    return -maxHistory - 1;
-//  }
 
   public void setTotalSizeCap(long totalSizeCap) {
     this.totalSizeCap = totalSizeCap;
