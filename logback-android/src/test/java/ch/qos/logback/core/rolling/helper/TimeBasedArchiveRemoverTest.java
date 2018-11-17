@@ -25,12 +25,12 @@ public class TimeBasedArchiveRemoverTest {
   private TimeBasedArchiveRemover remover;
   private final String CLEAN_DATE = "2018/11/04";
   private final File[] RECENT_FILES = new File[] {
-    new File("20181104.log"),
-    new File("20181105.log")
+    new File("app_20181104.log"),
+    new File("app_20181105.log")
   };
   private final File[] EXPIRED_FILES = new File[]{
-    new File("20181102.log"),
-    new File("20181103.log")
+    new File("app_20181102.log"),
+    new File("app_20181103.log")
   };
   private final File[] DUMMY_FILES = new File[] {
     EXPIRED_FILES[0],
@@ -49,7 +49,11 @@ public class TimeBasedArchiveRemoverTest {
     final File[] FILES = this.DUMMY_FILES;
 
     this.remover = spy(new TimeBasedArchiveRemover(new FileNamePattern(FILENAME_PATTERN, context), rollingCalendar, new FileProvider() {
-      public File[] list(File dir, FilenameFilter filter) {
+      public File[] listFiles(File dir, FilenameFilter filter) {
+        if (filter == null) {
+          return FILES;
+        }
+
         ArrayList<File> foundFiles = new ArrayList<File>();
         for (File f : FILES) {
           if (filter.accept(f.getParentFile(), f.getName())) {
@@ -58,20 +62,22 @@ public class TimeBasedArchiveRemoverTest {
         }
         return foundFiles.toArray(new File[foundFiles.size()]);
       }
+
+      public boolean deleteFile(File file) {
+        return true;
+      }
+
+      public boolean isFile(File file) {
+        return true;
+      }
     }));
 
     doReturn(true).when(this.remover).delete(any(File.class));
-//    doReturn(this.DUMMY_FILES).when(this.remover).getFilesInPeriod(any(Date.class));
 
     final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
     dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));
     this.remover.clean(dateFormat.parse(this.CLEAN_DATE));
   }
-
-//  @Test
-//  public void cleanCalculatesExpiredFiles() {
-//    verify(this.remover, atLeastOnce()).getFilesInPeriod(any(Date.class));
-//  }
 
   @Test
   public void cleanRemovesExpiredFiles() {

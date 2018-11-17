@@ -4,7 +4,15 @@ import java.io.File;
 import java.io.FilenameFilter;
 
 public class DefaultFileProvider implements FileProvider {
-  public File[] list(File dir, FilenameFilter filter) {
+  public File[] listFiles(File dir, FilenameFilter filter) {
     return dir.listFiles(filter);
+  }
+
+  public boolean deleteFile(File file) {
+    return file.delete();
+  }
+
+  public boolean isFile(File file) {
+    return file.isFile();
   }
 }

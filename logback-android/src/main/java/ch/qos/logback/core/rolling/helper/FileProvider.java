@@ -4,5 +4,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 
 interface FileProvider {
-  File[] list(File dir, FilenameFilter filter);
+  File[] listFiles(File dir, FilenameFilter filter);
+  boolean deleteFile(File file);
+  boolean isFile(File file);
 }

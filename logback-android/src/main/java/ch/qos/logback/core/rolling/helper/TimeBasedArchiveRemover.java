@@ -44,7 +44,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private long totalSizeCap = CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP;
   private final boolean parentClean;
 //  private long lastHeartBeat = UNINITIALIZED;
-  private FileProvider fileProvider;
+  private final FileProvider fileProvider;
 
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
@@ -79,14 +79,12 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     final Pattern pathPattern = Pattern.compile(this.fileNamePattern.toRegex(true));
     File resolvedFile = new File(this.fileNamePattern.convertMultipleArguments(now, 0));
     File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
-    File[] filesToDelete = this.fileProvider.list(parentDir, new FilenameFilter() {
+    File[] filesToDelete = this.fileProvider.listFiles(parentDir, new FilenameFilter() {
       public boolean accept(File dir, String baseName) {
         File file = new File(dir, baseName);
-
-// XXX: Does isFile() return false for non-existent files? That would break tests
-//        if (!file.isFile()) {
-//          return false;
-//        }
+        if (!TimeBasedArchiveRemover.this.fileProvider.isFile(file)) {
+          return false;
+        }
 
         boolean isExpiredFile = false;
         Matcher m = pathPattern.matcher(file.getAbsolutePath());
@@ -107,7 +105,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
       delete(f);
     }
 
-    if (this.parentClean && (parentDir.list().length == 0)) {
+    if (this.parentClean && (this.fileProvider.listFiles(parentDir, null).length == 0)) {
       delete(parentDir);
     }
   }
@@ -143,7 +141,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
 
   //@VisibleForTest
   boolean delete(File file) {
-    boolean ok = file.delete();
+    boolean ok = this.fileProvider.deleteFile(file);
     if (!ok) {
       addWarn("cannot delete " + file);
     }
