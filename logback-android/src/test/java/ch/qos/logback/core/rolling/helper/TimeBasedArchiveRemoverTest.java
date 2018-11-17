@@ -2,27 +2,33 @@ package ch.qos.logback.core.rolling.helper;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
 import ch.qos.logback.classic.LoggerContext;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TimeBasedArchiveRemoverTest {
 
   private TimeBasedArchiveRemover remover;
+  private final String TIMEZONE_NAME = "GMT";
   private final String CLEAN_DATE = "2018/11/04";
   private final File[] RECENT_FILES = new File[] {
     new File("app_20181104.log"),
@@ -38,45 +44,11 @@ public class TimeBasedArchiveRemoverTest {
     RECENT_FILES[0],
     RECENT_FILES[1]
   };
-  private final String TIMEZONE_NAME = "GMT";
 
   @Before
   public void clean() throws ParseException {
-    final String DATE_PATTERN = "yyyyMMdd";
-    final String FILENAME_PATTERN = "%d{" + DATE_PATTERN + ", " + this.TIMEZONE_NAME + "}.log";
-    final LoggerContext context = new LoggerContext();
-    final RollingCalendar rollingCalendar = new RollingCalendar(DATE_PATTERN);
-    final File[] FILES = this.DUMMY_FILES;
-
-    this.remover = spy(new TimeBasedArchiveRemover(new FileNamePattern(FILENAME_PATTERN, context), rollingCalendar, new FileProvider() {
-      public File[] listFiles(File dir, FilenameFilter filter) {
-        if (filter == null) {
-          return FILES;
-        }
-
-        ArrayList<File> foundFiles = new ArrayList<File>();
-        for (File f : FILES) {
-          if (filter.accept(f.getParentFile(), f.getName())) {
-            foundFiles.add(f);
-          }
-        }
-        return foundFiles.toArray(new File[foundFiles.size()]);
-      }
-
-      public boolean deleteFile(File file) {
-        return true;
-      }
-
-      public boolean isFile(File file) {
-        return true;
-      }
-    }));
-
-    doReturn(true).when(this.remover).delete(any(File.class));
-
-    final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
-    dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));
-    this.remover.clean(dateFormat.parse(this.CLEAN_DATE));
+    this.remover = this.createArchiveRemover();
+    this.remover.clean(this.parseDate("yyyy/MM/dd", this.CLEAN_DATE));
   }
 
   @Test
@@ -91,5 +63,45 @@ public class TimeBasedArchiveRemoverTest {
     for (File f : this.RECENT_FILES) {
       verify(this.remover, never()).delete(f);
     }
+  }
+
+  private Date parseDate(String format, String value) throws ParseException {
+    final SimpleDateFormat dateFormat = new SimpleDateFormat(format, Locale.US);
+    dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));
+    return dateFormat.parse(value);
+  }
+
+  private TimeBasedArchiveRemover createArchiveRemover() {
+    final String DATE_PATTERN = "yyyyMMdd";
+    final String FILENAME_PATTERN = "%d{" + DATE_PATTERN + ", " + this.TIMEZONE_NAME + "}.log";
+    LoggerContext context = new LoggerContext();
+    RollingCalendar rollingCalendar = new RollingCalendar(DATE_PATTERN);
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true, true);
+    FileNamePattern fileNamePattern = new FileNamePattern(FILENAME_PATTERN, context);
+    return spy(new TimeBasedArchiveRemover(fileNamePattern, rollingCalendar, fileProvider));
+  }
+
+  private FileProvider mockFileProvider(final File[] files, boolean isFileRval, boolean deleteFileRval) {
+    FileProvider fileProvider = mock(FileProvider.class);
+
+    when(fileProvider.listFiles(any(File.class), any(FilenameFilter.class))).then(
+      new Answer<File[]>() {
+        public File[] answer(InvocationOnMock invocation) {
+          FilenameFilter filter = invocation.getArgument(1);
+
+          ArrayList<File> foundFiles = new ArrayList<File>();
+          for (File f : files) {
+            if (filter.accept(f.getParentFile(), f.getName())) {
+              foundFiles.add(f);
+            }
+          }
+          return foundFiles.toArray(new File[0]);
+        }
+      }
+    );
+    when(fileProvider.listFiles(any(File.class), isNull(FilenameFilter.class))).thenReturn(files);
+    when(fileProvider.deleteFile(any(File.class))).thenReturn(deleteFileRval);
+    when(fileProvider.isFile(any(File.class))).thenReturn(isFileRval);
+    return fileProvider;
   }
 }
