@@ -26,8 +26,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ch.qos.logback.core.CoreConstants;
-import ch.qos.logback.core.pattern.Converter;
-import ch.qos.logback.core.pattern.LiteralConverter;
 import ch.qos.logback.core.spi.ContextAwareBase;
 import ch.qos.logback.core.util.FileSize;
 
@@ -45,7 +43,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
     this.rc = rc;
-    this.parentClean = computeParentCleaningFlag(fileNamePattern);
+    this.parentClean = fileNamePattern.convert(new Date()).contains("/");
     this.fileProvider = fileProvider;
     this.dateFormatter = getDateFormatter(fileNamePattern);
     this.pathPattern = Pattern.compile(fileNamePattern.toRegex(true));
@@ -121,44 +119,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
 
   protected void descendingSort(File[] matchingFileArray, Date date) {
     // nothing to do in super class
-  }
-
-  /**
-   * Computes whether the fileNamePattern may create sub-folders.
-   * @param fileNamePattern
-   * @return
-   */
-  private boolean computeParentCleaningFlag(FileNamePattern fileNamePattern) {
-    DateTokenConverter<Object> dtc = fileNamePattern.getPrimaryDateTokenConverter();
-    // if the date pattern has a /, then we need parent cleaning
-    if (dtc.getDatePattern().indexOf('/') != -1) {
-      return true;
-    }
-    // if the literal string subsequent to the dtc contains a /, we also
-    // need parent cleaning
-
-    Converter<Object> p = fileNamePattern.headTokenConverter;
-
-    // find the date converter
-    while (p != null) {
-      if (p instanceof DateTokenConverter) {
-        break;
-      }
-      p = p.getNext();
-    }
-
-    while (p != null) {
-      if (p instanceof LiteralConverter) {
-        String s = p.convert(null);
-        if (s.indexOf('/') != -1) {
-          return true;
-        }
-      }
-      p = p.getNext();
-    }
-
-    // no '/', so we don't need parent cleaning
-    return false;
   }
 
   public void setMaxHistory(int maxHistory) {
