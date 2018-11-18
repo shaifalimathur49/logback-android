@@ -67,6 +67,34 @@ public class TimeBasedArchiveRemoverTest {
   }
 
   @Test
+  public void cleanRemovesExpiredFilesOlderThanMaxHistory() {
+    final int MAX_HISTORY = 2;
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
+    this.remover = this.createArchiveRemover(fileProvider);
+    this.remover.setMaxHistory(MAX_HISTORY);
+    this.remover.clean(this.CLEAN_DATE);
+
+    for (int i = 0; i < this.EXPIRED_FILES.length - MAX_HISTORY; i++) {
+      File f = this.EXPIRED_FILES[i];
+      verify(fileProvider).deleteFile(f);
+    }
+  }
+
+  @Test
+  public void cleanKeepsMaxHistory() {
+    final int MAX_HISTORY = 2;
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
+    this.remover = this.createArchiveRemover(fileProvider);
+    this.remover.setMaxHistory(MAX_HISTORY);
+    this.remover.clean(this.CLEAN_DATE);
+
+    for (int i = this.EXPIRED_FILES.length - MAX_HISTORY; i < this.EXPIRED_FILES.length; i++) {
+      File f = this.EXPIRED_FILES[i];
+      verify(fileProvider, never()).deleteFile(f);
+    }
+  }
+
+  @Test
   public void doesNotCleanWhenDirEmpty() {
     FileProvider fileProvider = this.mockFileProvider(new File[0], true);
     this.remover = this.createArchiveRemover(fileProvider);

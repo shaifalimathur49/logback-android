@@ -89,7 +89,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     return FileFilterUtil.afterLastSlash(regex);
   }
 
-  //@VisibleForTest
   private boolean delete(File file) {
     boolean ok = this.fileProvider.deleteFile(file);
     if (!ok) {
@@ -195,17 +194,19 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private FilenameFilter createFileFilter(final Date now) {
     return new FilenameFilter() {
       public boolean accept(File dir, String baseName) {
+        final TimeBasedArchiveRemover _parent = TimeBasedArchiveRemover.this;
         File file = new File(dir, baseName);
-        if (!TimeBasedArchiveRemover.this.fileProvider.isFile(file)) {
+        if (!_parent.fileProvider.isFile(file)) {
           return false;
         }
 
         boolean isExpiredFile = false;
-        Matcher m = TimeBasedArchiveRemover.this.pathPattern.matcher(file.getAbsolutePath());
+        Matcher m = _parent.pathPattern.matcher(file.getAbsolutePath());
         if (m.find() && m.groupCount() >= 1) {
           String dateString = m.group(1);
-          Date fileDate = parseDate(dateString);
-          isExpiredFile = fileDate.compareTo(now) < 0;
+          Date fileDate = _parent.parseDate(dateString);
+          Date expiry = _parent.rc.getEndOfNextNthPeriod(now, -_parent.maxHistory);
+          isExpiredFile = fileDate.compareTo(expiry) < 0;
         }
         return isExpiredFile;
       }
