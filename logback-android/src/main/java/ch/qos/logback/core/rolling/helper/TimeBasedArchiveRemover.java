@@ -63,7 +63,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   public void clean(final Date now) {
-    File resolvedFile = new File(this.fileNamePattern.convertMultipleArguments(now, 0));
+    File resolvedFile = new File(this.fileNamePattern.convert(now));
     File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
     File[] filesToDelete = this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
 
