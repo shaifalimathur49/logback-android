@@ -1,6 +1,5 @@
 package ch.qos.logback.core.rolling.helper;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -16,9 +15,9 @@ import java.util.TimeZone;
 
 import ch.qos.logback.classic.LoggerContext;
 
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -29,7 +28,7 @@ public class TimeBasedArchiveRemoverTest {
 
   private TimeBasedArchiveRemover remover;
   private final String TIMEZONE_NAME = "GMT";
-  private final String CLEAN_DATE = "2018/11/04";
+  private final Date CLEAN_DATE = parseDate("yyyy/MM/dd", "2018/11/04");
   private final File[] RECENT_FILES = new File[] {
     new File("app_20181104.log"),
     new File("app_20181105.log")
@@ -45,43 +44,77 @@ public class TimeBasedArchiveRemoverTest {
     RECENT_FILES[1]
   };
 
-  @Before
-  public void clean() throws ParseException {
-    this.remover = this.createArchiveRemover();
-    this.remover.clean(this.parseDate("yyyy/MM/dd", this.CLEAN_DATE));
-  }
-
   @Test
   public void cleanRemovesExpiredFiles() {
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
+    this.remover = this.createArchiveRemover(fileProvider);
+    this.remover.clean(this.CLEAN_DATE);
+
     for (File f : this.EXPIRED_FILES) {
-      verify(this.remover, atLeastOnce()).delete(f);
+      verify(fileProvider).deleteFile(f);
     }
   }
 
   @Test
   public void cleanKeepsRecentFiles() {
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
+    this.remover = this.createArchiveRemover(fileProvider);
+    this.remover.clean(this.CLEAN_DATE);
+
     for (File f : this.RECENT_FILES) {
-      verify(this.remover, never()).delete(f);
+      verify(fileProvider, never()).deleteFile(f);
     }
   }
 
-  private Date parseDate(String format, String value) throws ParseException {
-    final SimpleDateFormat dateFormat = new SimpleDateFormat(format, Locale.US);
-    dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));
-    return dateFormat.parse(value);
+  @Test
+  public void doesNotCleanWhenDirEmpty() {
+    FileProvider fileProvider = this.mockFileProvider(new File[0], true);
+    this.remover = this.createArchiveRemover(fileProvider);
+    this.remover.clean(this.CLEAN_DATE);
+
+    verify(fileProvider, never()).deleteFile(any(File.class));
   }
 
-  private TimeBasedArchiveRemover createArchiveRemover() {
-    final String DATE_PATTERN = "yyyyMMdd";
-    final String FILENAME_PATTERN = "%d{" + DATE_PATTERN + ", " + this.TIMEZONE_NAME + "}.log";
+  @Test
+  public void doesNotCleanWhenNotFile() {
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, false);
+    this.remover = this.createArchiveRemover(fileProvider);
+    this.remover.clean(this.CLEAN_DATE);
+
+    verify(fileProvider, never()).deleteFile(any(File.class));
+  }
+
+//  @Test
+//  public void deletesParentDirWhenCleanRemoveAllFiles() {
+//    this.remover = this.createArchiveRemover(this.EXPIRED_FILES, true, true);
+//    this.remover.clean(this.CLEAN_DATE);
+//
+//    verify(this.remover).delete(this.PARENT_DIR);
+//  }
+
+  private Date parseDate(String format, String value) {
+    final SimpleDateFormat dateFormat = new SimpleDateFormat(format, Locale.US);
+    dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));
+    Date date;
+    try {
+      date = dateFormat.parse(value);
+    } catch (ParseException e) {
+      date = null;
+    }
+    assertNotNull(date);
+    return date;
+  }
+
+  private TimeBasedArchiveRemover createArchiveRemover(FileProvider fileProvider) {
+    final String DATE_FORMAT = "yyyyMMdd";
+    final String FILENAME_PATTERN = "%d{" + DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}.log";
     LoggerContext context = new LoggerContext();
-    RollingCalendar rollingCalendar = new RollingCalendar(DATE_PATTERN);
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true, true);
+    RollingCalendar rollingCalendar = new RollingCalendar(DATE_FORMAT);
     FileNamePattern fileNamePattern = new FileNamePattern(FILENAME_PATTERN, context);
     return spy(new TimeBasedArchiveRemover(fileNamePattern, rollingCalendar, fileProvider));
   }
 
-  private FileProvider mockFileProvider(final File[] files, boolean isFileRval, boolean deleteFileRval) {
+  private FileProvider mockFileProvider(final File[] files, boolean isFileRval) {
     FileProvider fileProvider = mock(FileProvider.class);
 
     when(fileProvider.listFiles(any(File.class), any(FilenameFilter.class))).then(
@@ -100,7 +133,6 @@ public class TimeBasedArchiveRemoverTest {
       }
     );
     when(fileProvider.listFiles(any(File.class), isNull(FilenameFilter.class))).thenReturn(files);
-    when(fileProvider.deleteFile(any(File.class))).thenReturn(deleteFileRval);
     when(fileProvider.isFile(any(File.class))).thenReturn(isFileRval);
     return fileProvider;
   }

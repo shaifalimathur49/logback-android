@@ -39,47 +39,33 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private long totalSizeCap = CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP;
   private final boolean parentClean;
   private final FileProvider fileProvider;
+  private final SimpleDateFormat dateFormatter;
+  private final Pattern pathPattern;
 
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
     this.rc = rc;
     this.parentClean = computeParentCleaningFlag(fileNamePattern);
     this.fileProvider = fileProvider;
+    this.dateFormatter = getDateFormatter(fileNamePattern);
+    this.pathPattern = Pattern.compile(fileNamePattern.toRegex(true));
   }
 
-  public void clean(final Date now) {
-    final DateTokenConverter<Object> dateStringConverter = this.fileNamePattern.getPrimaryDateTokenConverter();
+  private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {
+    final DateTokenConverter<Object> dateStringConverter = fileNamePattern.getPrimaryDateTokenConverter();
     final String datePattern = dateStringConverter.getDatePattern();
     final SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern, Locale.US);
     TimeZone timeZone = dateStringConverter.getTimeZone();
     if (timeZone != null) {
       dateFormatter.setTimeZone(timeZone);
     }
+    return dateFormatter;
+  }
 
-    final Pattern pathPattern = Pattern.compile(this.fileNamePattern.toRegex(true));
+  public void clean(final Date now) {
     File resolvedFile = new File(this.fileNamePattern.convertMultipleArguments(now, 0));
     File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
-    File[] filesToDelete = this.fileProvider.listFiles(parentDir, new FilenameFilter() {
-      public boolean accept(File dir, String baseName) {
-        File file = new File(dir, baseName);
-        if (!TimeBasedArchiveRemover.this.fileProvider.isFile(file)) {
-          return false;
-        }
-
-        boolean isExpiredFile = false;
-        Matcher m = pathPattern.matcher(file.getAbsolutePath());
-        if (m.find() && m.groupCount() >= 1) {
-          String dateString = m.group(1);
-          try {
-            Date fileDate = dateFormatter.parse(dateString);
-            isExpiredFile = fileDate.compareTo(now) < 0;
-          } catch (ParseException e) {
-            e.printStackTrace();
-          }
-        }
-        return isExpiredFile;
-      }
-    });
+    File[] filesToDelete = this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
 
     for (File f : filesToDelete) {
       delete(f);
@@ -104,7 +90,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   //@VisibleForTest
-  boolean delete(File file) {
+  private boolean delete(File file) {
     boolean ok = this.fileProvider.deleteFile(file);
     if (!ok) {
       addWarn("cannot delete " + file);
@@ -193,6 +179,37 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     ExecutorService executorService = context.getScheduledExecutorService();
     Future<?> future = executorService.submit(runnable);
     return future;
+  }
+
+  private Date parseDate(String dateString) {
+    Date date = null;
+    try {
+      date = this.dateFormatter.parse(dateString);
+    } catch (ParseException e) {
+      // should not happen
+      e.printStackTrace();
+    }
+    return date;
+  }
+
+  private FilenameFilter createFileFilter(final Date now) {
+    return new FilenameFilter() {
+      public boolean accept(File dir, String baseName) {
+        File file = new File(dir, baseName);
+        if (!TimeBasedArchiveRemover.this.fileProvider.isFile(file)) {
+          return false;
+        }
+
+        boolean isExpiredFile = false;
+        Matcher m = pathPattern.matcher(file.getAbsolutePath());
+        if (m.find() && m.groupCount() >= 1) {
+          String dateString = m.group(1);
+          Date fileDate = parseDate(dateString);
+          isExpiredFile = fileDate.compareTo(now) < 0;
+        }
+        return isExpiredFile;
+      }
+    };
   }
 
   private class ArhiveRemoverRunnable implements Runnable {
