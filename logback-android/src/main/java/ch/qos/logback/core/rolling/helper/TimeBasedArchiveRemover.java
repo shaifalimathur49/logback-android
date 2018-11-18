@@ -175,7 +175,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   public Future<?> cleanAsynchronously(Date now) {
-    ArhiveRemoverRunnable runnable = new ArhiveRemoverRunnable(now);
+    ArchiveRemoverRunnable runnable = new ArchiveRemoverRunnable(now);
     ExecutorService executorService = context.getScheduledExecutorService();
     Future<?> future = executorService.submit(runnable);
     return future;
@@ -201,7 +201,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
         }
 
         boolean isExpiredFile = false;
-        Matcher m = pathPattern.matcher(file.getAbsolutePath());
+        Matcher m = TimeBasedArchiveRemover.this.pathPattern.matcher(file.getAbsolutePath());
         if (m.find() && m.groupCount() >= 1) {
           String dateString = m.group(1);
           Date fileDate = parseDate(dateString);
@@ -212,9 +212,9 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     };
   }
 
-  private class ArhiveRemoverRunnable implements Runnable {
+  private class ArchiveRemoverRunnable implements Runnable {
     Date now;
-    ArhiveRemoverRunnable(Date now) {
+    ArchiveRemoverRunnable(Date now) {
       this.now = now;
     }
 
