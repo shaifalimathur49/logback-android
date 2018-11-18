@@ -28,7 +28,8 @@ public class TimeBasedArchiveRemoverTest {
 
   private TimeBasedArchiveRemover remover;
   private final String TIMEZONE_NAME = "GMT";
-  private final Date CLEAN_DATE = parseDate("yyyy/MM/dd", "2018/11/04");
+  private final String DATE_FORMAT = "yyyyMMdd";
+  private final Date CLEAN_DATE = parseDate(DATE_FORMAT, "20181104");
   private final File[] RECENT_FILES = new File[] {
     new File("app_20181104.log"),
     new File("app_20181105.log")
@@ -112,13 +113,16 @@ public class TimeBasedArchiveRemoverTest {
     verify(fileProvider, never()).deleteFile(any(File.class));
   }
 
-//  @Test
-//  public void deletesParentDirWhenCleanRemoveAllFiles() {
-//    this.remover = this.createArchiveRemover(this.EXPIRED_FILES, true, true);
-//    this.remover.clean(this.CLEAN_DATE);
-//
-//    verify(this.remover).delete(this.PARENT_DIR);
-//  }
+  @Test
+  public void removesParentDirWhenCleanRemovesAllFiles() {
+    FileProvider fileProvider = this.mockFileProvider(new File[0], true);
+    final String BASE_PATTERN = "%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}";
+    final String FILENAME_PATTERN = BASE_PATTERN + "/" + BASE_PATTERN + ".log";
+    this.remover = this.createArchiveRemover(fileProvider, FILENAME_PATTERN);
+    this.remover.clean(this.parseDate(this.DATE_FORMAT, "20181101"));
+
+    verify(fileProvider).deleteFile(new File("20181101").getAbsoluteFile());
+  }
 
   private Date parseDate(String format, String value) {
     final SimpleDateFormat dateFormat = new SimpleDateFormat(format, Locale.US);
@@ -134,12 +138,15 @@ public class TimeBasedArchiveRemoverTest {
   }
 
   private TimeBasedArchiveRemover createArchiveRemover(FileProvider fileProvider) {
-    final String DATE_FORMAT = "yyyyMMdd";
-    final String FILENAME_PATTERN = "%d{" + DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}.log";
+    final String FILENAME_PATTERN = "%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}.log";
+    return this.createArchiveRemover(fileProvider, FILENAME_PATTERN);
+  }
+
+  private TimeBasedArchiveRemover createArchiveRemover(FileProvider fileProvider, String fileNamePattern) {
     LoggerContext context = new LoggerContext();
-    RollingCalendar rollingCalendar = new RollingCalendar(DATE_FORMAT);
-    FileNamePattern fileNamePattern = new FileNamePattern(FILENAME_PATTERN, context);
-    TimeBasedArchiveRemover archiveRemover = new TimeBasedArchiveRemover(fileNamePattern, rollingCalendar, fileProvider);
+    RollingCalendar rollingCalendar = new RollingCalendar(this.DATE_FORMAT);
+    FileNamePattern filePattern = new FileNamePattern(fileNamePattern, context);
+    TimeBasedArchiveRemover archiveRemover = new TimeBasedArchiveRemover(filePattern, rollingCalendar, fileProvider);
     archiveRemover.setContext(context);
     return spy(archiveRemover);
   }
@@ -162,6 +169,7 @@ public class TimeBasedArchiveRemoverTest {
         }
       }
     );
+
     when(fileProvider.listFiles(any(File.class), isNull(FilenameFilter.class))).thenReturn(files);
     when(fileProvider.isFile(any(File.class))).thenReturn(isFileRval);
     return fileProvider;
