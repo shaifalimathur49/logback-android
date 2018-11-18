@@ -111,7 +111,9 @@ public class TimeBasedArchiveRemoverTest {
     LoggerContext context = new LoggerContext();
     RollingCalendar rollingCalendar = new RollingCalendar(DATE_FORMAT);
     FileNamePattern fileNamePattern = new FileNamePattern(FILENAME_PATTERN, context);
-    return spy(new TimeBasedArchiveRemover(fileNamePattern, rollingCalendar, fileProvider));
+    TimeBasedArchiveRemover archiveRemover = new TimeBasedArchiveRemover(fileNamePattern, rollingCalendar, fileProvider);
+    archiveRemover.setContext(context);
+    return spy(archiveRemover);
   }
 
   private FileProvider mockFileProvider(final File[] files, boolean isFileRval) {
