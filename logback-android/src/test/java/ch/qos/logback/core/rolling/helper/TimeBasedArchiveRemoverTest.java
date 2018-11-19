@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 
 import ch.qos.logback.classic.LoggerContext;
 
@@ -35,15 +36,14 @@ public class TimeBasedArchiveRemoverTest {
     new File("app_20181105.log")
   };
   private final File[] EXPIRED_FILES = new File[] {
+    new File("app_20160214.log"),
+    new File("app_20171225.log"),
+    new File("app_20180317.log"),
+    new File("app_20181101.log"),
     new File("app_20181102.log"),
     new File("app_20181103.log")
   };
-  private final File[] DUMMY_FILES = new File[] {
-    EXPIRED_FILES[0],
-    EXPIRED_FILES[1],
-    RECENT_FILES[0],
-    RECENT_FILES[1]
-  };
+  private final File[] DUMMY_FILES = Stream.concat(Stream.of(RECENT_FILES), Stream.of(EXPIRED_FILES)).toArray(File[]::new);
 
   @Test
   public void cleanRemovesExpiredFiles() {
