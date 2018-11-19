@@ -124,6 +124,22 @@ public class TimeBasedArchiveRemoverTest {
     verify(fileProvider).deleteFile(new File("20181101").getAbsoluteFile());
   }
 
+  @Test
+  public void cleanLimitsTotalFileSizeOfFiles() {
+    final int MAX_HISTORY = 2;
+    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
+    this.remover = this.createArchiveRemover(fileProvider);
+    final long FILE_SIZE = 10 * 1024L;
+    when(fileProvider.length(any(File.class))).thenReturn(FILE_SIZE);
+    this.remover.setTotalSizeCap(1 * 1024L);
+    this.remover.setMaxHistory(MAX_HISTORY);
+    this.remover.clean(this.CLEAN_DATE);
+
+    for (File f : this.EXPIRED_FILES) {
+      verify(fileProvider, never()).deleteFile(f);
+    }
+  }
+
   private Date parseDate(String format, String value) {
     final SimpleDateFormat dateFormat = new SimpleDateFormat(format, Locale.US);
     dateFormat.setTimeZone(TimeZone.getTimeZone(this.TIMEZONE_NAME));

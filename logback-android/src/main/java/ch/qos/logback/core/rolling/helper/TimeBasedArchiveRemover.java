@@ -66,20 +66,22 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     File[] filesToDelete = this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
 
     for (File f : filesToDelete) {
-      delete(f);
+      this.delete(f);
+    }
+
+    if (this.totalSizeCap != CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP && this.totalSizeCap > 0) {
+      this.capTotalSize(now);
     }
 
     if (this.parentClean && (this.fileProvider.listFiles(parentDir, null).length == 0)) {
-      delete(parentDir);
+      this.delete(parentDir);
     }
   }
 
-  protected File[] getFilesInPeriod(Date dateOfPeriodToClean) {
-    File archive0 = new File(fileNamePattern.convertMultipleArguments(dateOfPeriodToClean, 0));
-    File parentDir = archive0.getAbsoluteFile().getParentFile();
-    String stemRegex = createStemRegex(dateOfPeriodToClean);
-    File[] matchingFileArray = FileFilterUtil.filesInFolderMatchingStemRegex(parentDir, stemRegex);
-    return matchingFileArray;
+  protected File[] getFilesInPeriod(Date now) {
+    File resolvedFile = new File(this.fileNamePattern.convert(now));
+    File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
+    return this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
   }
 
   protected String createStemRegex(final Date dateOfPeriodToClean) {
@@ -103,7 +105,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
       File[] matchingFileArray = getFilesInPeriod(date);
       descendingSort(matchingFileArray, date);
       for (File f : matchingFileArray) {
-        long size = f.length();
+        long size = this.fileProvider.length(f);
         if (totalSize + size > totalSizeCap) {
           addInfo("Deleting [" + f + "]" + " of size " + new FileSize(size));
           totalRemoved += size;
@@ -182,9 +184,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     @Override
     public void run() {
       clean(now);
-      if (totalSizeCap != CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP && totalSizeCap > 0) {
-        capTotalSize(now);
-      }
     }
   }
 }
