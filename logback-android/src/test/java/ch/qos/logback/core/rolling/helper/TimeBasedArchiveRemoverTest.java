@@ -134,7 +134,7 @@ public class TimeBasedArchiveRemoverTest {
   }
 
   @Test
-  public void cleanLimitsTotalFileSizeOfFiles() {
+  public void cleanLimitsTotalSizeOfFiles() {
     final int MAX_HISTORY = 2;
     FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
     this.remover = this.createArchiveRemover(fileProvider);
