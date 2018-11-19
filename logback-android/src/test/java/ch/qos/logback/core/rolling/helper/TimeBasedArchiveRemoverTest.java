@@ -34,7 +34,7 @@ public class TimeBasedArchiveRemoverTest {
     new File("app_20181104.log"),
     new File("app_20181105.log")
   };
-  private final File[] EXPIRED_FILES = new File[]{
+  private final File[] EXPIRED_FILES = new File[] {
     new File("app_20181102.log"),
     new File("app_20181103.log")
   };

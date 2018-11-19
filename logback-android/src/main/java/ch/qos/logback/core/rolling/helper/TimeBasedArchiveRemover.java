@@ -49,20 +49,16 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     this.pathPattern = Pattern.compile(fileNamePattern.toRegex(true));
   }
 
-  private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {
-    final DateTokenConverter<Object> dateStringConverter = fileNamePattern.getPrimaryDateTokenConverter();
-    final String datePattern = dateStringConverter.getDatePattern();
-    final SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern, Locale.US);
-    TimeZone timeZone = dateStringConverter.getTimeZone();
-    if (timeZone != null) {
-      dateFormatter.setTimeZone(timeZone);
-    }
-    return dateFormatter;
-  }
-
   public void clean(final Date now) {
     File resolvedFile = new File(this.fileNamePattern.convert(now));
     File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
+
+    // TODO: Add FileProvider#list() interface to get only the filenames (this would
+    // be cheaper than getting all File instances for every file in the parent dir).
+    // Then use functions to get all the expired files and all the recent files.
+    // Pass the expired files to FileProvider#delete(). Pass the recent files
+    // to capTotalSize().
+
     File[] filesToDelete = this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
 
     for (File f : filesToDelete) {
@@ -173,6 +169,17 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
         return isExpiredFile;
       }
     };
+  }
+
+  private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {
+    final DateTokenConverter<Object> dateStringConverter = fileNamePattern.getPrimaryDateTokenConverter();
+    final String datePattern = dateStringConverter.getDatePattern();
+    final SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern, Locale.US);
+    TimeZone timeZone = dateStringConverter.getTimeZone();
+    if (timeZone != null) {
+      dateFormatter.setTimeZone(timeZone);
+    }
+    return dateFormatter;
   }
 
   private class ArchiveRemoverRunnable implements Runnable {
