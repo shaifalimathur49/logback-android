@@ -116,12 +116,21 @@ public class TimeBasedArchiveRemoverTest {
   @Test
   public void removesParentDirWhenCleanRemovesAllFiles() {
     FileProvider fileProvider = this.mockFileProvider(new File[0], true);
-    final String BASE_PATTERN = "%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}";
-    final String FILENAME_PATTERN = BASE_PATTERN + "/" + BASE_PATTERN + ".log";
+    final String FILENAME_PATTERN = "%d{yyyy_MM, " + this.TIMEZONE_NAME + "}/%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}";
     this.remover = this.createArchiveRemover(fileProvider, FILENAME_PATTERN);
     this.remover.clean(this.parseDate(this.DATE_FORMAT, "20181101"));
 
-    verify(fileProvider).deleteFile(new File("20181101").getAbsoluteFile());
+    verify(fileProvider).deleteFile(new File("2018_11").getAbsoluteFile());
+  }
+
+  @Test
+  public void keepsParentDirWhenItStillHasFiles() {
+    FileProvider fileProvider = this.mockFileProvider(new File[] { new File("2018_11/20181122.log") }, true);
+    final String FILENAME_PATTERN = "%d{yyyy_MM, " + this.TIMEZONE_NAME + "}/%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}";
+    this.remover = this.createArchiveRemover(fileProvider, FILENAME_PATTERN);
+    this.remover.clean(this.parseDate(this.DATE_FORMAT, "20181101"));
+
+    verify(fileProvider, never()).deleteFile(new File("2018_11").getAbsoluteFile());
   }
 
   @Test
