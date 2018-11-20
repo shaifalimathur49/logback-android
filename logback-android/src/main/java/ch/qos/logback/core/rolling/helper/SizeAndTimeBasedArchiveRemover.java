@@ -68,4 +68,9 @@ public class SizeAndTimeBasedArchiveRemover extends TimeBasedArchiveRemover {
       }
     });
   }
+
+  private String createStemRegex(final Date dateOfPeriodToClean) {
+    String regex = fileNamePattern.toRegexForFixedDate(dateOfPeriodToClean);
+    return FileFilterUtil.afterLastSlash(regex);
+  }
 }

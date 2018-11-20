@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -31,7 +33,7 @@ import ch.qos.logback.core.util.FileSize;
 
 public class TimeBasedArchiveRemover extends ContextAwareBase implements ArchiveRemover {
 
-  private final FileNamePattern fileNamePattern;
+  protected final FileNamePattern fileNamePattern;
   private final RollingCalendar rc;
   private int maxHistory = CoreConstants.UNBOUND_HISTORY;
   private long totalSizeCap = CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP;
@@ -59,30 +61,22 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     // Pass the expired files to FileProvider#delete(). Pass the recent files
     // to capTotalSize().
 
-    File[] filesToDelete = this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
+    // FIXME: Recursively search subdirectories (e.g., for "%d{yyyy/MM/dd}/%i.log")
 
-    for (File f : filesToDelete) {
+    File[] expiredFiles = this.fileProvider.listFiles(parentDir, this.createFileFilter(now, true));
+
+    for (File f : expiredFiles) {
       this.delete(f);
     }
 
     if (this.totalSizeCap != CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP && this.totalSizeCap > 0) {
-      this.capTotalSize(now);
+      File[] recentFiles = this.fileProvider.listFiles(parentDir, this.createFileFilter(now, false));
+      this.capTotalSize(recentFiles, now);
     }
 
     if (this.parentClean && (this.fileProvider.listFiles(parentDir, null).length == 0)) {
       this.delete(parentDir);
     }
-  }
-
-  protected File[] getFilesInPeriod(Date now) {
-    File resolvedFile = new File(this.fileNamePattern.convert(now));
-    File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
-    return this.fileProvider.listFiles(parentDir, this.createFileFilter(now));
-  }
-
-  protected String createStemRegex(final Date dateOfPeriodToClean) {
-    String regex = fileNamePattern.toRegexForFixedDate(dateOfPeriodToClean);
-    return FileFilterUtil.afterLastSlash(regex);
   }
 
   private boolean delete(File file) {
@@ -93,30 +87,38 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     return ok;
   }
 
-  private void capTotalSize(Date now) {
+  private void capTotalSize(File[] files, Date date) {
     long totalSize = 0;
     long totalRemoved = 0;
-    for (int offset = 0; offset < maxHistory; offset++) {
-      Date date = rc.getEndOfNextNthPeriod(now, -offset);
-      File[] matchingFileArray = getFilesInPeriod(date);
-      descendingSort(matchingFileArray, date);
-      for (File f : matchingFileArray) {
-        long size = this.fileProvider.length(f);
-        if (totalSize + size > totalSizeCap) {
-          addInfo("Deleting [" + f + "]" + " of size " + new FileSize(size));
-          totalRemoved += size;
-          if (!delete(f)) {
-            size = 0;
-          }
+
+    descendingSort(files, date);
+    for (File f : files) {
+      long size = this.fileProvider.length(f);
+      if (totalSize + size > this.totalSizeCap) {
+        addInfo("Deleting [" + f + "]" + " of size " + new FileSize(size));
+        if (!delete(f)) {
+          size = 0;
         }
-        totalSize += size;
+        totalRemoved += size;
       }
+      totalSize += size;
     }
+
     addInfo("Removed  "+ new FileSize(totalRemoved) + " of files");
   }
 
   protected void descendingSort(File[] matchingFileArray, Date date) {
-    // nothing to do in super class
+    Arrays.sort(matchingFileArray, new Comparator<File>() {
+      @Override
+      public int compare(final File f1, final File f2) {
+
+        Date date1 = parseDateFromFilename(f1.getAbsolutePath());
+        Date date2 = parseDateFromFilename(f2.getAbsolutePath());
+
+        // newest to oldest
+        return date2.compareTo(date1);
+      }
+    });
   }
 
   public void setMaxHistory(int maxHistory) {
@@ -149,7 +151,17 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     return date;
   }
 
-  private FilenameFilter createFileFilter(final Date now) {
+  private Date parseDateFromFilename(String filename) {
+    Date date = null;
+    Matcher m = this.pathPattern.matcher(filename);
+    if (m.find() && m.groupCount() >= 1) {
+      String dateString = m.group(1);
+      date = this.parseDate(dateString);
+    }
+    return date;
+  }
+
+  private FilenameFilter createFileFilter(final Date now, boolean isExpiryCheck) {
     return new FilenameFilter() {
       public boolean accept(File dir, String baseName) {
         final TimeBasedArchiveRemover _parent = TimeBasedArchiveRemover.this;
@@ -164,7 +176,9 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
           String dateString = m.group(1);
           Date fileDate = _parent.parseDate(dateString);
           Date expiry = _parent.rc.getEndOfNextNthPeriod(now, -_parent.maxHistory);
-          isExpiredFile = fileDate.compareTo(expiry) < 0;
+          isExpiredFile = isExpiryCheck
+                        ? fileDate.compareTo(expiry) < 0
+                        : fileDate.compareTo(expiry) > 0;
         }
         return isExpiredFile;
       }
