@@ -1,5 +1,7 @@
 package ch.qos.logback.core.rolling.helper;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -27,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 class TimeBasedArchiveRemoverTest {
 
-  private TimeBasedArchiveRemover remover;
   private final String TIMEZONE_NAME = "GMT";
   private final String DATE_FORMAT = "yyyyMMdd";
   private final Date CLEAN_DATE = parseDate(DATE_FORMAT, "20181104");
@@ -45,111 +46,140 @@ class TimeBasedArchiveRemoverTest {
   };
   private final File[] DUMMY_FILES = Stream.concat(Stream.of(RECENT_FILES), Stream.of(EXPIRED_FILES)).toArray(File[]::new);
 
-  @Test
-  void cleanRemovesExpiredFiles() {
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
-    this.remover = this.createArchiveRemover(fileProvider);
-    this.remover.clean(this.CLEAN_DATE);
+  @Nested
+  class ExpiredFileRemovalTest {
+    private TimeBasedArchiveRemover remover;
+    private FileProvider fileProvider;
 
-    Stream.of(this.EXPIRED_FILES)
-      .forEach(f -> verify(fileProvider).deleteFile(f));
+    @BeforeEach
+    void setup() {
+      fileProvider = mockFileProvider(DUMMY_FILES, true);
+      remover = createArchiveRemover(fileProvider);
+    }
+
+    @Test
+    void removesExpiredFiles() {
+      remover.clean(CLEAN_DATE);
+      Stream.of(EXPIRED_FILES)
+        .forEach(f -> verify(fileProvider).deleteFile(f));
+    }
+
+    @Test
+    void keepsRecentFiles() {
+      remover.clean(CLEAN_DATE);
+      Stream.of(RECENT_FILES)
+        .forEach(f -> verify(fileProvider, never()).deleteFile(f));
+    }
   }
 
-  @Test
-  void cleanKeepsRecentFiles() {
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
-    this.remover = this.createArchiveRemover(fileProvider);
-    this.remover.clean(this.CLEAN_DATE);
+  @Nested
+  class MiscTest {
 
-    Stream.of(this.RECENT_FILES)
-      .forEach(f -> verify(fileProvider, never()).deleteFile(f));
+    @Test
+    void doesNotCleanWhenDirEmpty() {
+      FileProvider fileProvider = mockFileProvider(new File[0], true);
+      TimeBasedArchiveRemover remover = createArchiveRemover(fileProvider);
+      remover.clean(CLEAN_DATE);
+
+      verify(fileProvider, never()).deleteFile(any(File.class));
+    }
+
+    @Test
+    void doesNotCleanWhenNotFile() {
+      FileProvider fileProvider = mockFileProvider(DUMMY_FILES, false);
+      TimeBasedArchiveRemover remover = createArchiveRemover(fileProvider);
+      remover.clean(CLEAN_DATE);
+
+      verify(fileProvider, never()).deleteFile(any(File.class));
+    }
   }
 
-  @Test
-  void cleanRemovesExpiredFilesOlderThanMaxHistory() {
+  @Nested
+  class MaxHistoryTest {
     final int MAX_HISTORY = 2;
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
-    this.remover = this.createArchiveRemover(fileProvider);
-    this.remover.setMaxHistory(MAX_HISTORY);
-    this.remover.clean(this.CLEAN_DATE);
+    private TimeBasedArchiveRemover remover;
+    private FileProvider fileProvider;
 
-    Stream.of(this.EXPIRED_FILES)
-      .skip(MAX_HISTORY)
-      .forEach(f -> verify(fileProvider).deleteFile(f));
+    @BeforeEach
+    void setup() {
+      fileProvider = mockFileProvider(DUMMY_FILES, true);
+      remover = createArchiveRemover(fileProvider);
+      remover.setMaxHistory(MAX_HISTORY);
+    }
+
+    @Test
+    void removesExpiredFilesOlderThanMaxHistory() {
+      remover.clean(CLEAN_DATE);
+      Stream.of(EXPIRED_FILES)
+        .skip(MAX_HISTORY)
+        .forEach(f -> verify(fileProvider).deleteFile(f));
+    }
+
+    @Test
+    void keepsMaxHistory() {
+      remover.clean(CLEAN_DATE);
+      Stream.of(EXPIRED_FILES)
+        .limit(MAX_HISTORY)
+        .forEach(f -> verify(fileProvider, never()).deleteFile(f));
+    }
   }
 
-  @Test
-  void cleanKeepsMaxHistory() {
-    final int MAX_HISTORY = 2;
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
-    this.remover = this.createArchiveRemover(fileProvider);
-    this.remover.setMaxHistory(MAX_HISTORY);
-    this.remover.clean(this.CLEAN_DATE);
+  @Nested
+  class ParentCleanRemovalTest {
 
-    Stream.of(this.EXPIRED_FILES)
-      .limit(MAX_HISTORY)
-      .forEach(f -> verify(fileProvider, never()).deleteFile(f));
+    @Test
+    void removesParentDirWhenCleanRemovesAllFiles() {
+      FileProvider fileProvider = mockFileProvider(new File[0], true);
+      final String FILENAME_PATTERN = "%d{yyyy_MM, " + TIMEZONE_NAME + "}/%d{" + DATE_FORMAT + ", " + TIMEZONE_NAME + "}";
+      TimeBasedArchiveRemover remover = createArchiveRemover(fileProvider, FILENAME_PATTERN);
+      remover.clean(parseDate(DATE_FORMAT, "20181101"));
+
+      verify(fileProvider).deleteFile(new File("2018_11").getAbsoluteFile());
+    }
+
+    @Test
+    void keepsParentDirWhenItStillHasFiles() {
+      FileProvider fileProvider = mockFileProvider(new File[]{new File("2018_11/20181122.log")}, true);
+      final String FILENAME_PATTERN = "%d{yyyy_MM, " + TIMEZONE_NAME + "}/%d{" + DATE_FORMAT + ", " + TIMEZONE_NAME + "}";
+      TimeBasedArchiveRemover remover = createArchiveRemover(fileProvider, FILENAME_PATTERN);
+      remover.clean(parseDate(DATE_FORMAT, "20181101"));
+
+      verify(fileProvider, never()).deleteFile(new File("2018_11").getAbsoluteFile());
+    }
   }
 
-  @Test
-  void doesNotCleanWhenDirEmpty() {
-    FileProvider fileProvider = this.mockFileProvider(new File[0], true);
-    this.remover = this.createArchiveRemover(fileProvider);
-    this.remover.clean(this.CLEAN_DATE);
+  @Nested
+  class TotalSizeCapTest {
+    private TimeBasedArchiveRemover remover;
+    private FileProvider fileProvider;
+    private final int MAX_HISTORY = 4;
+    private final int NUM_FILES_TO_KEEP = 3;
 
-    verify(fileProvider, never()).deleteFile(any(File.class));
-  }
+    @BeforeEach
+    void setup() {
+      final long FILE_SIZE = 1024L;
+      this.fileProvider = mockFileProvider(DUMMY_FILES, true);
+      this.remover = createArchiveRemover(fileProvider);
+      when(fileProvider.length(any(File.class))).thenReturn(FILE_SIZE);
+      when(fileProvider.deleteFile(any(File.class))).thenReturn(true);
+      this.remover.setTotalSizeCap(NUM_FILES_TO_KEEP * FILE_SIZE);
+      this.remover.setMaxHistory(MAX_HISTORY);
+    }
 
-  @Test
-  void doesNotCleanWhenNotFile() {
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, false);
-    this.remover = this.createArchiveRemover(fileProvider);
-    this.remover.clean(this.CLEAN_DATE);
+    @Test
+    void removesOlderFilesThatExceedTotalSizeCap() {
+      this.remover.clean(CLEAN_DATE);
+      Stream.of(EXPIRED_FILES)
+        .skip(MAX_HISTORY - NUM_FILES_TO_KEEP)
+        .forEach(f -> verify(fileProvider).deleteFile(f));
+    }
 
-    verify(fileProvider, never()).deleteFile(any(File.class));
-  }
-
-  @Test
-  void removesParentDirWhenCleanRemovesAllFiles() {
-    FileProvider fileProvider = this.mockFileProvider(new File[0], true);
-    final String FILENAME_PATTERN = "%d{yyyy_MM, " + this.TIMEZONE_NAME + "}/%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}";
-    this.remover = this.createArchiveRemover(fileProvider, FILENAME_PATTERN);
-    this.remover.clean(this.parseDate(this.DATE_FORMAT, "20181101"));
-
-    verify(fileProvider).deleteFile(new File("2018_11").getAbsoluteFile());
-  }
-
-  @Test
-  void keepsParentDirWhenItStillHasFiles() {
-    FileProvider fileProvider = this.mockFileProvider(new File[] { new File("2018_11/20181122.log") }, true);
-    final String FILENAME_PATTERN = "%d{yyyy_MM, " + this.TIMEZONE_NAME + "}/%d{" + this.DATE_FORMAT + ", " + this.TIMEZONE_NAME + "}";
-    this.remover = this.createArchiveRemover(fileProvider, FILENAME_PATTERN);
-    this.remover.clean(this.parseDate(this.DATE_FORMAT, "20181101"));
-
-    verify(fileProvider, never()).deleteFile(new File("2018_11").getAbsoluteFile());
-  }
-
-  @Test
-  void cleanLimitsTotalSizeOfFiles() {
-    final int MAX_HISTORY = 4;
-    final long FILE_SIZE = 1024L;
-    final int NUM_FILES_TO_KEEP = 3;
-
-    FileProvider fileProvider = this.mockFileProvider(this.DUMMY_FILES, true);
-    this.remover = this.createArchiveRemover(fileProvider);
-    when(fileProvider.length(any(File.class))).thenReturn(FILE_SIZE);
-    when(fileProvider.deleteFile(any(File.class))).thenReturn(true);
-    this.remover.setTotalSizeCap(NUM_FILES_TO_KEEP * FILE_SIZE);
-    this.remover.setMaxHistory(MAX_HISTORY);
-
-    this.remover.clean(this.CLEAN_DATE);
-
-    Stream.of(this.EXPIRED_FILES)
-      .skip(MAX_HISTORY - NUM_FILES_TO_KEEP)
-      .forEach(f -> verify(fileProvider).deleteFile(f));
-
-    Stream.concat(Stream.of(this.RECENT_FILES), Stream.of(this.EXPIRED_FILES).limit(MAX_HISTORY - NUM_FILES_TO_KEEP))
-      .forEach(f -> verify(fileProvider, never()).deleteFile(f));
+    @Test
+    void keepsRecentFilesAndOlderFilesWithinTotalSizeCap() {
+      this.remover.clean(CLEAN_DATE);
+      Stream.concat(Stream.of(RECENT_FILES), Stream.of(EXPIRED_FILES).limit(MAX_HISTORY - NUM_FILES_TO_KEEP))
+        .forEach(f -> verify(this.fileProvider, never()).deleteFile(f));
+    }
   }
 
   private Date parseDate(String format, String value) {
