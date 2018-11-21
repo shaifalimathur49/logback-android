@@ -13,10 +13,13 @@
  */
 package ch.qos.logback.core.rolling.helper;
 
+import org.codehaus.plexus.util.DirectoryScanner;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
@@ -41,6 +44,8 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private final FileProvider fileProvider;
   private final SimpleDateFormat dateFormatter;
   private final Pattern pathPattern;
+  private final String pathRegexString;
+  private final String parentPath;
 
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
@@ -48,34 +53,29 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     this.parentClean = fileNamePattern.convert(new Date()).contains("/");
     this.fileProvider = fileProvider;
     this.dateFormatter = getDateFormatter(fileNamePattern);
-    this.pathPattern = Pattern.compile(fileNamePattern.toRegex(true));
+    this.pathRegexString = fileNamePattern.toRegex(true);
+    this.pathPattern = Pattern.compile(this.pathRegexString);
+    this.parentPath = fileNamePattern.getDatePathPrefix();
   }
 
   public void clean(final Date now) {
-    File resolvedFile = new File(this.fileNamePattern.convert(now));
-    File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
-
-    // TODO: Add FileProvider#list() interface to get only the filenames (this would
-    // be cheaper than getting all File instances for every file in the parent dir).
-    // Then use functions to get all the expired files and all the recent files.
-    // Pass the expired files to FileProvider#delete(). Pass the recent files
-    // to capTotalSize().
-
-    // FIXME: Recursively search subdirectories (e.g., for "%d{yyyy/MM/dd}/%i.log")
-
-    File[] expiredFiles = this.fileProvider.listFiles(parentDir, this.createFileFilter(now, true));
-
-    for (File f : expiredFiles) {
-      this.delete(f);
+    String[] files = this.findFiles(this.parentPath, this.pathRegexString);
+    String[] expiredFiles = this.filterFiles(files, this.createExpiredFileFilter(now));
+    for (String f : expiredFiles) {
+      this.delete(new File(f));
     }
 
     if (this.totalSizeCap != CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP && this.totalSizeCap > 0) {
-      File[] recentFiles = this.fileProvider.listFiles(parentDir, this.createFileFilter(now, false));
+      String[] recentFiles = this.filterFiles(files, this.createRecentFileFilter(now));
       this.capTotalSize(recentFiles, now);
     }
 
-    if (this.parentClean && (this.fileProvider.listFiles(parentDir, null).length == 0)) {
-      this.delete(parentDir);
+    if (this.parentClean) {
+      File resolvedFile = new File(this.fileNamePattern.convert(now));
+      File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
+      if (this.fileProvider.listFiles(parentDir, null).length == 0) {
+        this.delete(parentDir);
+      }
     }
   }
 
@@ -87,12 +87,13 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     return ok;
   }
 
-  private void capTotalSize(File[] files, Date date) {
+  private void capTotalSize(String[] filenames, Date date) {
     long totalSize = 0;
     long totalRemoved = 0;
 
-    descendingSort(files, date);
-    for (File f : files) {
+    descendingSort(filenames, date);
+    for (String name : filenames) {
+      File f = new File(name);
       long size = this.fileProvider.length(f);
       if (totalSize + size > this.totalSizeCap) {
         addInfo("Deleting [" + f + "]" + " of size " + new FileSize(size));
@@ -107,13 +108,13 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     addInfo("Removed  "+ new FileSize(totalRemoved) + " of files");
   }
 
-  protected void descendingSort(File[] matchingFileArray, Date date) {
-    Arrays.sort(matchingFileArray, new Comparator<File>() {
+  private void descendingSort(String[] filenames, Date date) {
+    Arrays.sort(filenames, new Comparator<String>() {
       @Override
-      public int compare(final File f1, final File f2) {
+      public int compare(final String f1, final String f2) {
 
-        Date date1 = parseDateFromFilename(f1.getAbsolutePath());
-        Date date2 = parseDateFromFilename(f2.getAbsolutePath());
+        Date date1 = parseDateFromFilename(f1);
+        Date date2 = parseDateFromFilename(f2);
 
         // newest to oldest
         return date2.compareTo(date1);
@@ -161,28 +162,46 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     return date;
   }
 
-  private FilenameFilter createFileFilter(final Date now, boolean isExpiryCheck) {
-    return new FilenameFilter() {
-      public boolean accept(File dir, String baseName) {
-        final TimeBasedArchiveRemover _parent = TimeBasedArchiveRemover.this;
-        File file = new File(dir, baseName);
-        if (!_parent.fileProvider.isFile(file)) {
-          return false;
-        }
+  private FilenameFilter createRecentFileFilter(Date baseDate) {
+    return createFileFilter(baseDate, false);
+  }
 
-        boolean isExpiredFile = false;
-        Matcher m = _parent.pathPattern.matcher(file.getAbsolutePath());
-        if (m.find() && m.groupCount() >= 1) {
-          String dateString = m.group(1);
-          Date fileDate = _parent.parseDate(dateString);
-          Date expiry = _parent.rc.getEndOfNextNthPeriod(now, -_parent.maxHistory);
-          isExpiredFile = isExpiryCheck
-                        ? fileDate.compareTo(expiry) < 0
-                        : fileDate.compareTo(expiry) > 0;
-        }
-        return isExpiredFile;
+  private FilenameFilter createExpiredFileFilter(Date baseDate) {
+    return createFileFilter(baseDate, true);
+  }
+
+  private FilenameFilter createFileFilter(Date baseDate, boolean before) {
+    return new FilenameFilter() {
+      @Override
+      public boolean accept(File unused, String path) {
+        Date fileDate = parseDateFromFilename(path);
+        Date adjustedDate = rc.getEndOfNextNthPeriod(baseDate, -maxHistory);
+        int comparison = fileDate.compareTo(adjustedDate);
+        return before ? (comparison < 0) : (comparison >= 0);
       }
     };
+  }
+
+  private String[] filterFiles(String[] filenames, FilenameFilter filter) {
+    ArrayList<String> matchedFiles = new ArrayList<String>();
+    for (String f : filenames) {
+      if (filter.accept(null, f)) {
+        matchedFiles.add(f);
+      }
+    }
+    return matchedFiles.toArray(new String[0]);
+  }
+
+  private String[] findFiles(String baseDir, String regex) {
+    String[] includes = { "%regex[" + regex + "]" };
+    DirectoryScanner scanner = new DirectoryScanner();
+    scanner.setBasedir(new File(baseDir));
+    scanner.setIncludes(includes);
+    scanner.setBasedir(new File("test"));
+    scanner.setCaseSensitive(true);
+    scanner.scan();
+
+    return scanner.getIncludedFiles();
   }
 
   private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {

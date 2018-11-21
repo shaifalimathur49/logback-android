@@ -243,4 +243,17 @@ public class FileNamePattern extends ContextAwareBase {
     }
     return buf.toString();
   }
+
+  /**
+   * Gets the string before any date pattern
+   * @return
+   */
+  public String getDatePathPrefix() {
+    String prefix = "";
+    int indexOfPattern = pattern.indexOf("%");
+    if (indexOfPattern > 0 && pattern.charAt(indexOfPattern - 1) != '\\') {
+      prefix = pattern.substring(0, indexOfPattern);
+    }
+    return prefix;
+  }
 }
