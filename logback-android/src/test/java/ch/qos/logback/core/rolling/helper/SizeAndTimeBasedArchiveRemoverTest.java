@@ -7,12 +7,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import ch.qos.logback.core.Context;
 import ch.qos.logback.core.ContextBase;
 import ch.qos.logback.core.util.CoreTestConstants;
 
+@Ignore("Test to be deleted...See TimeBasedArchiveRemoverTest")
 public class SizeAndTimeBasedArchiveRemoverTest {
 
     Context context = new ContextBase();
@@ -30,7 +32,7 @@ public class SizeAndTimeBasedArchiveRemoverTest {
         fileArray[0] = expected[1] = new File(CoreTestConstants.OUTPUT_DIR_PREFIX, baseFilename + "-0.gz");
         fileArray[1] = expected[0] = new File(CoreTestConstants.OUTPUT_DIR_PREFIX, baseFilename + "-1.gz");
 
-        remover.descendingSort(fileArray, today);
+//        remover.descendingSort(fileArray, today);
 
         assertArrayEquals(expected, fileArray);
     }
@@ -48,7 +50,7 @@ public class SizeAndTimeBasedArchiveRemoverTest {
         fileArray[0] = expected[0] = new File(CoreTestConstants.OUTPUT_DIR_PREFIX, baseFilename + "-b.gz");
         fileArray[1] = expected[1] = new File(CoreTestConstants.OUTPUT_DIR_PREFIX, baseFilename + "-c.gz");
 
-        remover.descendingSort(fileArray, today);
+//        remover.descendingSort(fileArray, today);
 
         assertArrayEquals(expected, fileArray);
     }
