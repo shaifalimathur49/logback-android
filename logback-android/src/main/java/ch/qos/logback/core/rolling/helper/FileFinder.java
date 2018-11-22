@@ -9,16 +9,16 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 class FileFinder {
-  private String pathPattern;
+
+  // FIXME: Actual dir names can contain these chars, so we can't
+  // assume this was from FilenamePattern. Modify FilenamePattern
+  // to escape dir names that contain these chars, and then this
+  // class needs to check if the chars are escaped.
   /** Possible regex characters in a filename pattern */
-  private static final Pattern REGEX_CHARS = Pattern.compile("[\\[\\](){}.+?*]|(?:\\[dwWsSbB]])");
+  private static final Pattern REGEX_CHARS = Pattern.compile("[\\[\\](){}+?*]|(?:\\[dwWsSbB]])");
 
-  FileFinder(String pathPattern) {
-    this.pathPattern = pathPattern;
-  }
-
-  String[] findFiles() {
-    List<PathPart> pathParts = this.splitPath(this.pathPattern);
+  String[] findFiles(String pathPattern) {
+    List<PathPart> pathParts = this.splitPath(pathPattern);
     List<File> files;
     PathPart pathPart = pathParts.get(0);
     if (pathParts.size() > 1) {

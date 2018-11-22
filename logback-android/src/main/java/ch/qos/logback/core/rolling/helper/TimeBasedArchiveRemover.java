@@ -181,7 +181,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   private String[] findFiles() {
-    return new FileFinder(this.fileNamePattern.toRegex()).findFiles();
+    return new FileFinder().findFiles(this.fileNamePattern.toRegex());
   }
 
   private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {
