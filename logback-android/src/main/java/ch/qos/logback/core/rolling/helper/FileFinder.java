@@ -3,8 +3,10 @@ package ch.qos.logback.core.rolling.helper;
 import android.text.TextUtils;
 
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -14,15 +16,9 @@ class FileFinder {
   private static final String REGEX_MARKER_END = "(?:\uFFFF)?";
 
   String[] findFiles(String pathPattern) {
-    List<PathPart> pathParts = this.splitPath(pathPattern);
-    List<File> files;
-    PathPart pathPart = pathParts.get(0);
-    if (pathParts.size() > 1) {
-      pathParts = pathParts.subList(1, pathParts.size());
-    }
-
-    files = pathPart.listFiles();
-    List<File> foundFiles = find(files, pathParts);
+    Deque<PathPart> pathParts = this.splitPath(pathPattern);
+    PathPart pathPart = pathParts.remove();
+    List<File> foundFiles = find(pathPart.listFiles(), pathParts);
     List<String> filenames = new ArrayList<>();
     for (File f : foundFiles) {
       filenames.add(f.getAbsolutePath());
@@ -30,12 +26,11 @@ class FileFinder {
     return filenames.toArray(new String[0]);
   }
 
-  List<File> find(List<File> files, List<PathPart> pathParts) {
+  List<File> find(List<File> files, Deque<PathPart> pathParts) {
     List<File> matchedFiles = new ArrayList<>();
 
-    if (pathParts.size() == 1) {
-      PathPart pathPart = pathParts.get(0);
-
+    PathPart pathPart = pathParts.remove();
+    if (pathParts.isEmpty()) {
       for (File file : files) {
         if (file.isFile() && pathPart.matches(file)) {
           matchedFiles.add(file);
@@ -44,17 +39,16 @@ class FileFinder {
       return matchedFiles;
     }
 
-    PathPart pathPart = pathParts.get(0);
     for (File file : files) {
       if (file.isDirectory() && pathPart.matches(file)) {
-        return find(Arrays.asList(file.listFiles()), pathParts.subList(1, pathParts.size()));
+        return find(Arrays.asList(file.listFiles()), pathParts);
       }
     }
     return matchedFiles;
   }
 
-  List<PathPart> splitPath(String pattern) {
-    List<PathPart> parts = new ArrayList<>();
+  Deque<PathPart> splitPath(String pattern) {
+    Deque<PathPart> parts = new ArrayDeque<>();
     List<String> literals = new ArrayList<>();
     for (String p : pattern.split(File.separator)) {
       final boolean isRegex = p.contains(REGEX_MARKER_START) && p.contains(REGEX_MARKER_END);

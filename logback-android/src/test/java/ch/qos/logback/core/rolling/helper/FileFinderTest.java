@@ -61,8 +61,10 @@ class FileFinderTest {
     }
 
     private List<String> splitPath(String pattern) {
-      List<PathPart> parts = finder.splitPath(pattern);
-      return parts.stream().map(p -> p.part).collect(Collectors.toList());
+      return finder.splitPath(pattern)
+              .stream()
+              .map(p -> p.part)
+              .collect(Collectors.toList());
     }
   }
 }
