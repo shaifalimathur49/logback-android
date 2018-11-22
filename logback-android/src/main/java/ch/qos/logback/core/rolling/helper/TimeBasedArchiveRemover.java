@@ -13,8 +13,6 @@
  */
 package ch.qos.logback.core.rolling.helper;
 
-import org.codehaus.plexus.util.DirectoryScanner;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.text.ParseException;
@@ -45,7 +43,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private final SimpleDateFormat dateFormatter;
   private final Pattern pathPattern;
   private final String pathRegexString;
-  private final String parentPath;
 
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
@@ -55,11 +52,10 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     this.dateFormatter = getDateFormatter(fileNamePattern);
     this.pathRegexString = fileNamePattern.toRegex(true);
     this.pathPattern = Pattern.compile(this.pathRegexString);
-    this.parentPath = fileNamePattern.getDatePathPrefix();
   }
 
   public void clean(final Date now) {
-    String[] files = this.findFiles(this.parentPath, this.pathRegexString);
+    String[] files = this.findFiles();
     String[] expiredFiles = this.filterFiles(files, this.createExpiredFileFilter(now));
     for (String f : expiredFiles) {
       this.delete(new File(f));
@@ -73,7 +69,8 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     if (this.parentClean) {
       File resolvedFile = new File(this.fileNamePattern.convert(now));
       File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
-      if (this.fileProvider.listFiles(parentDir, null).length == 0) {
+      String[] parentFiles = this.fileProvider.list(parentDir, null);
+      if (parentFiles != null && parentFiles.length == 0) {
         this.delete(parentDir);
       }
     }
@@ -192,16 +189,8 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     return matchedFiles.toArray(new String[0]);
   }
 
-  private String[] findFiles(String baseDir, String regex) {
-    String[] includes = { "%regex[" + regex + "]" };
-    DirectoryScanner scanner = new DirectoryScanner();
-    scanner.setBasedir(new File(baseDir));
-    scanner.setIncludes(includes);
-    scanner.setBasedir(new File("test"));
-    scanner.setCaseSensitive(true);
-    scanner.scan();
-
-    return scanner.getIncludedFiles();
+  private String[] findFiles() {
+    return new FileFinder(this.fileNamePattern).findFiles();
   }
 
   private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {

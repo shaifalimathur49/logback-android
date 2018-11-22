@@ -13,10 +13,8 @@
  */
 package ch.qos.logback.core.rolling.helper;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import ch.qos.logback.core.Context;
@@ -242,18 +240,5 @@ public class FileNamePattern extends ContextAwareBase {
       p = p.getNext();
     }
     return buf.toString();
-  }
-
-  /**
-   * Gets the string before any date pattern
-   * @return
-   */
-  public String getDatePathPrefix() {
-    String prefix = "";
-    int indexOfPattern = pattern.indexOf("%");
-    if (indexOfPattern > 0 && pattern.charAt(indexOfPattern - 1) != '\\') {
-      prefix = pattern.substring(0, indexOfPattern);
-    }
-    return prefix;
   }
 }

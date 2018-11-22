@@ -8,6 +8,10 @@ public class DefaultFileProvider implements FileProvider {
     return dir.listFiles(filter);
   }
 
+  public String[] list(File dir, FilenameFilter filter) {
+    return dir.list(filter);
+  }
+
   public boolean deleteFile(File file) {
     return file.delete();
   }
@@ -18,5 +22,13 @@ public class DefaultFileProvider implements FileProvider {
 
   public long length(File file) {
     return file.length();
+  }
+
+  public boolean exists(File file) {
+    return file.exists();
+  }
+
+  public boolean isDirectory(File file) {
+    return file.isDirectory();
   }
 }
