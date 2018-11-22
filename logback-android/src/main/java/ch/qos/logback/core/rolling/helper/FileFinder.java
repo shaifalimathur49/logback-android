@@ -79,18 +79,19 @@ class FileFinder {
     if (path.contains(File.separator)) {
       String[] parts = path.split(File.separator);
       for (int i = 0; i < parts.length; i++) {
-        parts[i] = FileFinder.REGEX_MARKER_START + parts[i] + FileFinder.REGEX_MARKER_END;
+        if (parts[i].length() > 0) {
+          parts[i] = REGEX_MARKER_START + parts[i] + REGEX_MARKER_END;
+        }
       }
       return TextUtils.join(File.separator, parts);
     } else {
-      return FileFinder.REGEX_MARKER_START + path + FileFinder.REGEX_MARKER_END;
+      return REGEX_MARKER_START + path + REGEX_MARKER_END;
     }
   }
 }
 
 abstract class PathPart {
   String part;
-  boolean isRegex;
 
   PathPart(String part) {
     this.part = part;
@@ -127,7 +128,6 @@ class RegexPathPart extends PathPart {
 
   RegexPathPart(String part) {
     super(part);
-    isRegex = true;
     pattern = Pattern.compile(part);
   }
 
