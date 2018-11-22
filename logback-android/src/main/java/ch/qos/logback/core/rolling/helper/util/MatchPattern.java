@@ -1,4 +1,5 @@
-package org.codehaus.plexus.util;
+//package org.codehaus.plexus.util;
+package ch.qos.logback.core.rolling.helper;
 /*
  * Copyright The Codehaus Foundation.
  *

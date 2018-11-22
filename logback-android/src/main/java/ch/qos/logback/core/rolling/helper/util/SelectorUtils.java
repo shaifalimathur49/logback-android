@@ -52,7 +52,8 @@
  * <http://www.codehaus.org/>.
  */
 
-package org.codehaus.plexus.util;
+//package org.codehaus.plexus.util;
+package ch.qos.logback.core.rolling.helper;
 
 import java.io.File;
 import java.util.ArrayList;
