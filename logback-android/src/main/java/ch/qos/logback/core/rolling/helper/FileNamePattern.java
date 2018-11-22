@@ -177,7 +177,7 @@ public class FileNamePattern extends ContextAwareBase {
   public void setPattern(String pattern) {
     if (pattern != null) {
       // Trailing spaces in the pattern are assumed to be undesired.
-      this.pattern = pattern.trim();
+      this.pattern = pattern.trim().replace("//", "/");
     }
   }
 

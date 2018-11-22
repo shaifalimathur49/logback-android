@@ -26,9 +26,9 @@ class FileFinder {
     }
 
     if (pathPart.isRegex) {
-      files = Arrays.asList(new File(".").listFiles());
+      files = Arrays.asList(new File(".").getAbsoluteFile().listFiles());
     } else {
-      files = Arrays.asList(new File(pathPart.part).listFiles());
+      files = Arrays.asList(new File(pathPart.part).getAbsoluteFile().listFiles());
     }
     List<File> foundFiles = find(files, pathParts);
     List<String> filenames = new ArrayList<String>();

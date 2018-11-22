@@ -45,7 +45,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
     this.rc = rc;
-    this.parentClean = fileNamePattern.convert(new Date()).contains("/");
+    this.parentClean = fileNamePattern.convertMultipleArguments(new Date(), 0).contains("/");
     this.fileProvider = fileProvider;
     this.dateFormatter = getDateFormatter(fileNamePattern);
     String pathRegexString = fileNamePattern.toRegex(true);
@@ -65,7 +65,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     }
 
     if (this.parentClean) {
-      File resolvedFile = new File(this.fileNamePattern.convert(now));
+      File resolvedFile = new File(this.fileNamePattern.convertMultipleArguments(now, 0));
       File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
       String[] parentFiles = this.fileProvider.list(parentDir, null);
       if (parentFiles != null && parentFiles.length == 0) {
