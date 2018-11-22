@@ -9,14 +9,16 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 class FileFinder {
-  private FileNamePattern fileNamePattern;
+  private String pathPattern;
+  /** Possible regex characters in a filename pattern */
+  private static final Pattern REGEX_CHARS = Pattern.compile("[\\[\\](){}.+?*]|(?:\\[dwWsSbB]])");
 
-  FileFinder(FileNamePattern fileNamePattern) {
-    this.fileNamePattern = fileNamePattern;
+  FileFinder(String pathPattern) {
+    this.pathPattern = pathPattern;
   }
 
   String[] findFiles() {
-    List<PathPart> pathParts = this.splitPattern(this.fileNamePattern);
+    List<PathPart> pathParts = this.splitPath(this.pathPattern);
     List<File> files;
     PathPart pathPart = pathParts.get(0);
     if (pathParts.size() > 1) {
@@ -36,27 +38,15 @@ class FileFinder {
     return filenames.toArray(new String[0]);
   }
 
-  private List<File> find(List<File> files, List<PathPart> pathParts) {
+  List<File> find(List<File> files, List<PathPart> pathParts) {
     List<File> matchedFiles = new ArrayList<File>();
 
     if (pathParts.size() == 1) {
       PathPart pathPart = pathParts.get(0);
-      Pattern p = null;
-      if (pathPart.isRegex) {
-        p = Pattern.compile(pathPart.part);
-      }
 
       for (File file : files) {
-        if (file.isFile()) {
-          if (pathPart.isRegex) {
-            if (p != null && p.matcher(file.getName()).find()) {
-              matchedFiles.add(file);
-            }
-          } else {
-            if (file.getName().equals(pathPart.part)) {
-              matchedFiles.add(file);
-            }
-          }
+        if (file.isFile() && pathPart.matches(file)) {
+          matchedFiles.add(file);
         }
       }
       return matchedFiles;
@@ -64,29 +54,19 @@ class FileFinder {
 
     PathPart pathPart = pathParts.get(0);
     for (File file : files) {
-      if (file.isDirectory()) {
-        if (pathPart.isRegex) {
-          Pattern p = Pattern.compile(pathPart.part);
-          if (p.matcher(file.getName()).find()) {
-            return find(Arrays.asList(file.listFiles()), pathParts.subList(1, pathParts.size()));
-          }
-        } else {
-          if (file.getName().equals(pathPart.part)) {
-            return find(Arrays.asList(file.listFiles()), pathParts.subList(1, pathParts.size()));
-          }
-        }
+      if (file.isDirectory() && pathPart.matches(file)) {
+        return find(Arrays.asList(file.listFiles()), pathParts.subList(1, pathParts.size()));
       }
     }
     return matchedFiles;
   }
 
-  private List<PathPart> splitPattern(FileNamePattern pattern) {
-    final Pattern REGEX_CHARS = Pattern.compile("[\\[\\](){}.+?*]|(?:\\[dwWsSbB]])");
-    List<PathPart> parts = new ArrayList<PathPart>();
-    List<String> literals = new ArrayList<String>();
-    for (String p : pattern.toRegex().split(File.separator)) {
+  List<PathPart> splitPath(String pattern) {
+    List<PathPart> parts = new ArrayList<>();
+    List<String> literals = new ArrayList<>();
+    for (String p : pattern.split(File.separator)) {
       if (REGEX_CHARS.matcher(p).find()) {
-        if (literals.size() > 0) {
+        if (!literals.isEmpty()) {
           parts.add(new LiteralPathPart(TextUtils.join(File.separator, literals)));
           literals.clear();
         }
@@ -95,7 +75,7 @@ class FileFinder {
         literals.add(p);
       }
     }
-    if (literals.size() > 0) {
+    if (!literals.isEmpty()) {
       parts.add(new LiteralPathPart(TextUtils.join(File.separator, literals)));
     }
     return parts;
@@ -109,6 +89,8 @@ abstract class PathPart {
   PathPart(String part) {
     this.part = part;
   }
+
+  abstract boolean matches(File file);
 }
 
 class LiteralPathPart extends PathPart {

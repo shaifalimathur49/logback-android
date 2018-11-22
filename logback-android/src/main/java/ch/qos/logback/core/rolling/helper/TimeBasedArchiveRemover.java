@@ -19,7 +19,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -42,7 +41,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private final FileProvider fileProvider;
   private final SimpleDateFormat dateFormatter;
   private final Pattern pathPattern;
-  private final String pathRegexString;
 
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
@@ -50,8 +48,8 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     this.parentClean = fileNamePattern.convert(new Date()).contains("/");
     this.fileProvider = fileProvider;
     this.dateFormatter = getDateFormatter(fileNamePattern);
-    this.pathRegexString = fileNamePattern.toRegex(true);
-    this.pathPattern = Pattern.compile(this.pathRegexString);
+    String pathRegexString = fileNamePattern.toRegex(true);
+    this.pathPattern = Pattern.compile(pathRegexString);
   }
 
   public void clean(final Date now) {
@@ -88,7 +86,7 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     long totalSize = 0;
     long totalRemoved = 0;
 
-    descendingSort(filenames, date);
+    sortByDate(filenames);
     for (String name : filenames) {
       File f = new File(name);
       long size = this.fileProvider.length(f);
@@ -105,17 +103,13 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
     addInfo("Removed  "+ new FileSize(totalRemoved) + " of files");
   }
 
-  private void descendingSort(String[] filenames, Date date) {
-    Arrays.sort(filenames, new Comparator<String>() {
-      @Override
-      public int compare(final String f1, final String f2) {
+  private void sortByDate(String[] filenames) {
+    Arrays.sort(filenames, (String f1, String f2) -> {
+      Date date1 = parseDateFromFilename(f1);
+      Date date2 = parseDateFromFilename(f2);
 
-        Date date1 = parseDateFromFilename(f1);
-        Date date2 = parseDateFromFilename(f2);
-
-        // newest to oldest
-        return date2.compareTo(date1);
-      }
+      // newest to oldest
+      return date2.compareTo(date1);
     });
   }
 
@@ -168,19 +162,16 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   private FilenameFilter createFileFilter(Date baseDate, boolean before) {
-    return new FilenameFilter() {
-      @Override
-      public boolean accept(File unused, String path) {
-        Date fileDate = parseDateFromFilename(path);
-        Date adjustedDate = rc.getEndOfNextNthPeriod(baseDate, -maxHistory);
-        int comparison = fileDate.compareTo(adjustedDate);
-        return before ? (comparison < 0) : (comparison >= 0);
-      }
+    return (File unused, String path) -> {
+      Date fileDate = parseDateFromFilename(path);
+      Date adjustedDate = rc.getEndOfNextNthPeriod(baseDate, -maxHistory);
+      int comparison = fileDate.compareTo(adjustedDate);
+      return before ? (comparison < 0) : (comparison >= 0);
     };
   }
 
   private String[] filterFiles(String[] filenames, FilenameFilter filter) {
-    ArrayList<String> matchedFiles = new ArrayList<String>();
+    ArrayList<String> matchedFiles = new ArrayList<>();
     for (String f : filenames) {
       if (filter.accept(null, f)) {
         matchedFiles.add(f);
@@ -190,14 +181,14 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   private String[] findFiles() {
-    return new FileFinder(this.fileNamePattern).findFiles();
+    return new FileFinder(this.fileNamePattern.toRegex()).findFiles();
   }
 
   private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {
     final DateTokenConverter<Object> dateStringConverter = fileNamePattern.getPrimaryDateTokenConverter();
-    final String datePattern = dateStringConverter.getDatePattern();
+    final String datePattern = dateStringConverter != null ? dateStringConverter.getDatePattern() : "yyyyMMdd";
     final SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern, Locale.US);
-    TimeZone timeZone = dateStringConverter.getTimeZone();
+    TimeZone timeZone = dateStringConverter != null ? dateStringConverter.getTimeZone() : TimeZone.getTimeZone("GMT");
     if (timeZone != null) {
       dateFormatter.setTimeZone(timeZone);
     }
