@@ -10,12 +10,8 @@ import java.util.regex.Pattern;
 
 class FileFinder {
 
-  // FIXME: Actual dir names can contain these chars, so we can't
-  // assume this was from FilenamePattern. Modify FilenamePattern
-  // to escape dir names that contain these chars, and then this
-  // class needs to check if the chars are escaped.
-  /** Possible regex characters in a filename pattern */
-  private static final Pattern REGEX_CHARS = Pattern.compile("[\\[\\](){}+?*]|(?:\\[dwWsSbB]])");
+  private static final String REGEX_MARKER_START = "(?:\uFFFE)?";
+  private static final String REGEX_MARKER_END = "(?:\uFFFF)?";
 
   String[] findFiles(String pathPattern) {
     List<PathPart> pathParts = this.splitPath(pathPattern);
@@ -25,13 +21,9 @@ class FileFinder {
       pathParts = pathParts.subList(1, pathParts.size());
     }
 
-    if (pathPart.isRegex) {
-      files = Arrays.asList(new File(".").getAbsoluteFile().listFiles());
-    } else {
-      files = Arrays.asList(new File(pathPart.part).getAbsoluteFile().listFiles());
-    }
+    files = pathPart.listFiles();
     List<File> foundFiles = find(files, pathParts);
-    List<String> filenames = new ArrayList<String>();
+    List<String> filenames = new ArrayList<>();
     for (File f : foundFiles) {
       filenames.add(f.getAbsolutePath());
     }
@@ -39,7 +31,7 @@ class FileFinder {
   }
 
   List<File> find(List<File> files, List<PathPart> pathParts) {
-    List<File> matchedFiles = new ArrayList<File>();
+    List<File> matchedFiles = new ArrayList<>();
 
     if (pathParts.size() == 1) {
       PathPart pathPart = pathParts.get(0);
@@ -65,7 +57,9 @@ class FileFinder {
     List<PathPart> parts = new ArrayList<>();
     List<String> literals = new ArrayList<>();
     for (String p : pattern.split(File.separator)) {
-      if (REGEX_CHARS.matcher(p).find()) {
+      final boolean isRegex = p.contains(REGEX_MARKER_START) && p.contains(REGEX_MARKER_END);
+      p = p.replace(REGEX_MARKER_START, "").replace(REGEX_MARKER_END, "");
+      if (isRegex) {
         if (!literals.isEmpty()) {
           parts.add(new LiteralPathPart(TextUtils.join(File.separator, literals)));
           literals.clear();
@@ -80,6 +74,18 @@ class FileFinder {
     }
     return parts;
   }
+
+  static String regexEscapePath(String path) {
+    if (path.contains(File.separator)) {
+      String[] parts = path.split(File.separator);
+      for (int i = 0; i < parts.length; i++) {
+        parts[i] = FileFinder.REGEX_MARKER_START + parts[i] + FileFinder.REGEX_MARKER_END;
+      }
+      return TextUtils.join(File.separator, parts);
+    } else {
+      return FileFinder.REGEX_MARKER_START + path + FileFinder.REGEX_MARKER_END;
+    }
+  }
 }
 
 abstract class PathPart {
@@ -91,6 +97,15 @@ abstract class PathPart {
   }
 
   abstract boolean matches(File file);
+  abstract List<File> listFiles();
+
+  List<File> listFiles(String part) {
+    File[] files = new File(part).getAbsoluteFile().listFiles();
+    if (files == null) {
+      files = new File[0];
+    }
+    return Arrays.asList(files);
+  }
 }
 
 class LiteralPathPart extends PathPart {
@@ -100,6 +115,10 @@ class LiteralPathPart extends PathPart {
 
   boolean matches(File file) {
     return file.getName().equals(part);
+  }
+
+  List<File> listFiles() {
+    return listFiles(part);
   }
 }
 
@@ -114,5 +133,9 @@ class RegexPathPart extends PathPart {
 
   boolean matches(File file) {
     return pattern.matcher(file.getName()).find();
+  }
+
+  List<File> listFiles() {
+    return listFiles(".");
   }
 }

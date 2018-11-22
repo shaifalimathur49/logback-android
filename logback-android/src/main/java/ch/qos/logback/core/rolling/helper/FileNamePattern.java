@@ -200,13 +200,13 @@ public class FileNamePattern extends ContextAwareBase {
       if (p instanceof LiteralConverter) {
         buf.append(p.convert(null));
       } else if (p instanceof IntegerTokenConverter) {
-        buf.append("(\\d+)");
+        buf.append(FileFinder.regexEscapePath("(\\d+)"));
       } else if (p instanceof DateTokenConverter) {
         DateTokenConverter<Object> dtc = (DateTokenConverter<Object>) p;
         if (dtc.isPrimary()) {
           buf.append(p.convert(date));
         } else {
-          buf.append(dtc.toRegex());
+          buf.append(FileFinder.regexEscapePath(dtc.toRegex()));
         }
       }
       p = p.getNext();
@@ -228,14 +228,15 @@ public class FileNamePattern extends ContextAwareBase {
       if (p instanceof LiteralConverter) {
         buf.append(p.convert(null));
       } else if (p instanceof IntegerTokenConverter) {
-        buf.append("\\d+");
+        buf.append(FileFinder.regexEscapePath("\\d+"));
       } else if (p instanceof DateTokenConverter) {
         DateTokenConverter<Object> dtc = (DateTokenConverter<Object>) p;
         if (capturePrimaryDate && dtc.isPrimary()) {
-          buf.append("(").append(dtc.toRegex()).append(")");
+          buf.append(FileFinder.regexEscapePath("(" + dtc.toRegex() + ")"));
         } else {
-          buf.append(dtc.toRegex());
+          buf.append(FileFinder.regexEscapePath(dtc.toRegex()));
         }
+
       }
       p = p.getNext();
     }
