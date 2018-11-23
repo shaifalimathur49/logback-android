@@ -43,7 +43,6 @@ import static ch.qos.logback.core.CoreConstants.DAILY_DATE_PATTERN;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Ignore("Need to add maxHistory support to TimeBasedArchiveRemover")
 public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRollingTests {
   String MONTHLY_CRONOLOG_DATE_PATTERN = "yyyy/MM";
   final String DAILY_CRONOLOG_DATE_PATTERN = "yyyy/MM/dd";
@@ -173,8 +172,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     checkFileCount(sizeInUnitsOfBytesPerPeriod+1);
   }
 
-  // FIXME: Fix intermittently failing test
-  @Ignore
   @Test
   public void checkThatSmallTotalSizeCapLeavesAtLeastOneArhcive() {
     long WED_2016_03_23_T_131345_CET = WED_2016_03_23_T_230705_CET - 10 * CoreConstants.MILLIS_IN_ONE_HOUR;
@@ -229,7 +226,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     ConfigParameters cp1 = new ConfigParameters(endTime + MILLIS_IN_DAY * 10).maxHistory(maxHistory).fileNamePattern(fileNamePattern)
             .simulatedNumberOfPeriods(maxHistory);
     logOverMultiplePeriods(cp1);
-    checkFileCount(expectedCountWithoutFolders(maxHistory));
+    checkFileCount(maxHistory);
   }
 
   @Test
@@ -253,7 +250,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     String fileNamePattern = randomOutputDir + "/%d{" + DAILY_DATE_PATTERN + "}-clean.%i.zip";
     cp.maxHistory(5).fileNamePattern(fileNamePattern).simulatedNumberOfPeriods(5 * 4);
     logOverMultiplePeriods(cp);
-    checkPatternCompliance(5 + 1 + slashCount, "\\d{4}-\\d{2}-\\d{2}-clean(\\.\\d)(.zip)?");
+    checkPatternCompliance(cp.maxHistory + slashCount, "\\d{4}-\\d{2}-\\d{2}-clean(\\.\\d)(.zip)?");
   }
 
   @Test
@@ -297,7 +294,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     String fileNamePattern = randomOutputDir + "/%d{" + DAILY_DATE_PATTERN + "}/clean.%i.zip";
     cp.maxHistory(5).fileNamePattern(fileNamePattern).simulatedNumberOfPeriods(5 * 3);
     logOverMultiplePeriods(cp);
-    checkDirPatternCompliance(6);
+    checkDirPatternCompliance(cp.maxHistory);
   }
 
   @Test
@@ -316,7 +313,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     ConfigParameters cp1 = new ConfigParameters(endTime + MILLIS_IN_DAY * 7).maxHistory(maxHistory).fileNamePattern(fileNamePattern)
             .simulatedNumberOfPeriods(simulatedNumberOfPeriods);
     logOverMultiplePeriods(cp1);
-    checkDirPatternCompliance(maxHistory + 1);
+    checkDirPatternCompliance(maxHistory);
   }
 
 
@@ -343,7 +340,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
       simulatedTime += MILLIS_IN_DAY;
     }
     //StatusPrinter.print(context);
-    checkFileCount(expectedCountWithoutFolders(maxHistory));
+    checkFileCount(maxHistory);
   }
 
   @Test
@@ -356,34 +353,11 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
       simulatedTime += MILLIS_IN_HOUR;
     }
     //StatusPrinter.print(context);
-    checkFileCount(expectedCountWithoutFolders(maxHistory));
+    checkFileCount(maxHistory);
   }
-
-  @Ignore
-  @Test
-  // this test assumes a high degree of collisions in the archived files. Every 24 hours, the archive
-  // belonging to the previous day will be overwritten. Given that logback goes 14 days (336 hours) in history
-  // to clean files on start up, it is bound to delete more recent files. It is not logback's responsibility
-  // to cater for such degenerate cases.
-  public void cleanHistoryOnStartWithHourPattern() {
-    long now = this.currentTime;
-    String fileNamePattern = randomOutputDir + "clean-%d{HH}.txt";
-    int maxHistory = 3;
-    for (int i = 0; i <= 5; i++) {
-      logTwiceAndStop(now, fileNamePattern, maxHistory, MILLIS_IN_HOUR);
-      now = now + MILLIS_IN_HOUR;
-    }
-    //StatusPrinter.print(context);
-    checkFileCount(expectedCountWithoutFolders(maxHistory));
-  }
-
-  int expectedCountWithoutFolders(int maxHistory) {
-    return maxHistory + 1;
-  }
-
 
   int expectedCountWithFolders(int maxHistory, boolean withExtraFolder) {
-    int numLogFiles = (maxHistory + 1);
+    int numLogFiles = maxHistory;
     int numLogFilesAndFolders = numLogFiles * 2;
     int result = numLogFilesAndFolders + slashCount;
     if (withExtraFolder) result += 1;
@@ -482,7 +456,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   int expectedCountWithoutFoldersWithInactivity(int maxHistory, int totalPeriods, int endOfInactivity) {
     int availableHistory = (totalPeriods + 1) - endOfInactivity;
-    int actualHistory = Math.min(availableHistory, maxHistory + 1);
+    int actualHistory = Math.min(availableHistory, maxHistory);
     return actualHistory;
   }
 
