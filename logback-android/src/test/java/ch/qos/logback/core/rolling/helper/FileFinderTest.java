@@ -24,7 +24,7 @@ class FileFinderTest {
 
     @BeforeEach
     void setup() {
-      finder = new FileFinder();
+      finder = new FileFinder(new DefaultFileProvider());
     }
 
     @Test

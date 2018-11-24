@@ -17,9 +17,12 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -37,7 +40,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   private final RollingCalendar rc;
   private int maxHistory = CoreConstants.UNBOUND_HISTORY;
   private long totalSizeCap = CoreConstants.UNBOUNDED_TOTAL_SIZE_CAP;
-  private final boolean parentClean;
   private final FileProvider fileProvider;
   private final SimpleDateFormat dateFormatter;
   private final Pattern pathPattern;
@@ -45,7 +47,6 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   public TimeBasedArchiveRemover(FileNamePattern fileNamePattern, RollingCalendar rc, FileProvider fileProvider) {
     this.fileNamePattern = fileNamePattern;
     this.rc = rc;
-    this.parentClean = fileNamePattern.convertMultipleArguments(new Date(), 0).contains("/");
     this.fileProvider = fileProvider;
     this.dateFormatter = getDateFormatter(fileNamePattern);
     String pathRegexString = fileNamePattern.toRegex(true);
@@ -64,13 +65,9 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
       this.capTotalSize(recentFiles, now);
     }
 
-    if (this.parentClean) {
-      File resolvedFile = new File(this.fileNamePattern.convertMultipleArguments(now, 0));
-      File parentDir = resolvedFile.getAbsoluteFile().getParentFile();
-      String[] parentFiles = this.fileProvider.list(parentDir, null);
-      if (parentFiles != null && parentFiles.length == 0) {
-        this.delete(parentDir);
-      }
+    String[] emptyDirs = this.findEmptyDirs();
+    for (String dir : emptyDirs) {
+      this.delete(new File(dir));
     }
   }
 
@@ -181,7 +178,26 @@ public class TimeBasedArchiveRemover extends ContextAwareBase implements Archive
   }
 
   private String[] findFiles() {
-    return new FileFinder().findFiles(this.fileNamePattern.toRegex());
+    return new FileFinder(this.fileProvider).findFiles(this.fileNamePattern.toRegex());
+  }
+
+  private String[] findEmptyDirs() {
+    String[] dirs = new FileFinder(this.fileProvider).findDirs(this.fileNamePattern.toRegex());
+
+    // Assuming directories were already sorted, let's reverse it
+    // so we can iterate the list deepest first (deletes deepest
+    // dirs first so their parents would be empty for deletion
+    // to succeed).
+    List<String> dirList = Arrays.asList(dirs);
+    Collections.reverse(dirList);
+    ArrayDeque<String> emptyDirs = new ArrayDeque<>();
+    for (String dir : dirList) {
+      int childSize = this.fileProvider.list(new File(dir), null).length;
+      if (childSize == 0 || (childSize == 1 && emptyDirs.size() > 0 && dir.equals(emptyDirs.peekLast()))) {
+        emptyDirs.add(dir);
+      }
+    }
+    return emptyDirs.toArray(new String[0]);
   }
 
   private SimpleDateFormat getDateFormatter(FileNamePattern fileNamePattern) {

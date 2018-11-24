@@ -101,12 +101,17 @@ class TimeBasedArchiveRemoverTest {
 
     @Test
     void removesParentDirWhenEmpty() throws IOException {
-      File emptyDir = tmpDir.newFolder();
-      emptyDir.deleteOnExit();
-      remover = mockArchiveRemover(emptyDir.getAbsolutePath() + File.separator + "%d.log", fileProvider);
+      File[] emptyDirs = new File[] {
+        tmpDir.newFolder("empty_2018", "08"),
+        tmpDir.newFolder("empty_2018", "12"),
+        tmpDir.newFolder("empty_2019", "01"),
+      };
+      Stream.of(emptyDirs).forEach(File::deleteOnExit);
+
+      remover = mockArchiveRemover(tmpDir.getRoot().getAbsolutePath() + File.separator + "empty_%d{yyyy/MM}" + File.separator + "%d.log", fileProvider);
       remover.clean(EXPIRY);
 
-      verify(fileProvider).deleteFile(emptyDir.getAbsoluteFile());
+      Stream.of(emptyDirs).forEach(d -> verify(fileProvider).deleteFile(d));
     }
 
     @Test
