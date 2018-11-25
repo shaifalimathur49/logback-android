@@ -17,8 +17,10 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class CallerDataTest  {
 
 
