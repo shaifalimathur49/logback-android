@@ -56,7 +56,8 @@ class FileFinder {
 
     for (File file : files) {
       if (fileProvider.isDirectory(file) && pathPart.matches(file)) {
-        return findFiles(Arrays.asList(fileProvider.listFiles(file, null)), pathParts, index + 1);
+        List<File> filesInDir = findFiles(Arrays.asList(fileProvider.listFiles(file, null)), pathParts, index + 1);
+        matchedFiles.addAll(filesInDir);
       }
     }
     return matchedFiles;

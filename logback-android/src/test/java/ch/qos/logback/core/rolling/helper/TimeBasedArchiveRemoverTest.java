@@ -29,26 +29,33 @@ class TimeBasedArchiveRemoverTest {
 
   private final String TIMEZONE_NAME = "GMT";
   private final String DATE_FORMAT = "yyyyMMdd";
-  private final Date EXPIRY = parseDate(DATE_FORMAT, "20181104");
+  private final Date EXPIRY = parseDate(DATE_FORMAT, "20191104");
   private final String FILENAME_PATTERN = "%d{yyyy/MM, aux}/app_%d{" + DATE_FORMAT + ", " + TIMEZONE_NAME + "}.log";
 
   private File[] expiredFiles;
   private File[] recentFiles;
 
   private void setupTmpDir(TemporaryFolder tmpDir) throws IOException {
-    tmpDir.newFolder("2018", "11").deleteOnExit();
+    File[] dirs = new File[] {
+      tmpDir.newFolder("2016", "02"),
+      tmpDir.newFolder("2017", "12"),
+      tmpDir.newFolder("2018", "03"),
+      tmpDir.newFolder("2019", "11"),
+      tmpDir.newFolder("2019", "10"),
+    };
     recentFiles = new File[] {
-      tmpDir.newFile("2018/11/app_20181105.log"),
-      tmpDir.newFile("2018/11/app_20181104.log"),
+      tmpDir.newFile("2019/11/app_20191105.log"),
+      tmpDir.newFile("2019/11/app_20191104.log"),
     };
     expiredFiles = new File[] {
-      tmpDir.newFile("2018/11/app_20181103.log"),
-      tmpDir.newFile("2018/11/app_20181102.log"),
-      tmpDir.newFile("2018/11/app_20181101.log"),
-      tmpDir.newFile("2018/11/app_20180317.log"),
-      tmpDir.newFile("2018/11/app_20171225.log"),
-      tmpDir.newFile("2018/11/app_20160214.log"),
+      tmpDir.newFile("2019/11/app_20191103.log"),
+      tmpDir.newFile("2019/11/app_20191102.log"),
+      tmpDir.newFile("2019/10/app_20191001.log"),
+      tmpDir.newFile("2018/03/app_20180317.log"),
+      tmpDir.newFile("2017/12/app_20171225.log"),
+      tmpDir.newFile("2016/02/app_20160214.log"),
     };
+    Stream.of(dirs).forEach(File::deleteOnExit);
     Stream.of(recentFiles).forEach(File::deleteOnExit);
     Stream.of(expiredFiles).forEach(File::deleteOnExit);
   }
