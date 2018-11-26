@@ -110,13 +110,13 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     checkFileCount(expectedCountWithFolders(maxHistory, withExtraFolder));
   }
 
-  long generateDailyRollover(ConfigParameters cp) {
+  private long generateDailyRollover(ConfigParameters cp) {
     this.slashCount = computeSlashCount(DAILY_DATE_PATTERN);
     cp.fileNamePattern(randomOutputDir + "clean-%d{" + DAILY_DATE_PATTERN + "}.txt");
     return logOverMultiplePeriods(cp);
   }
 
-  long generateDailyRolloverAndCheckFileCount(ConfigParameters cp) {
+  private long generateDailyRolloverAndCheckFileCount(ConfigParameters cp) {
     long millisAtEnd = generateDailyRollover(cp);
     int periodBarriersCrossed = computeCrossedDayBarriers(currentTime, millisAtEnd);
     checkFileCount(expectedCountWithoutFoldersWithInactivity(cp.maxHistory, periodBarriersCrossed, cp.startInactivity + cp.numInactivityPeriods));
@@ -268,20 +268,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     checkDirPatternCompliance(maxHistory);
   }
 
-
-  private void logTwiceAndStop(long currentTime, String fileNamePattern, int maxHistory, long timePeriod) {
-    ConfigParameters params = new ConfigParameters(currentTime).fileNamePattern(fileNamePattern).maxHistory(maxHistory);
-    buildRollingFileAppender(params, DO_CLEAN_HISTORY_ON_START);
-    rfa.doAppend("Hello ----------------------------------------------------------" + new Date(currentTime));
-    currentTime += timePeriod/2;
-    add(tbrp.compressionFuture);
-    add(tbrp.cleanUpFuture);
-    waitForJobsToComplete();
-    tbrp.timeBasedFileNamingAndTriggeringPolicy.setCurrentTime(currentTime);
-    rfa.doAppend("Hello ----------------------------------------------------------" + new Date(currentTime));
-    rfa.stop();
-  }
-
   private int expectedCountWithFolders(int maxHistory, boolean withExtraFolder) {
     int numLogFiles = maxHistory;
     int numLogFilesAndFolders = numLogFiles * 2;
@@ -306,7 +292,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     rfa.start();
   }
 
-  private boolean DO_CLEAN_HISTORY_ON_START = true;
   private boolean DO_NOT_CLEAN_HISTORY_ON_START = false;
 
   private long logOverMultiplePeriods(ConfigParameters cp) {
