@@ -92,7 +92,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   // with success.
   @Test
   public void monthlyRolloverOverManyPeriods() {
-
+    System.out.println("## monthlyRolloverOverManyPeriods");
     this.slashCount = computeSlashCount(MONTHLY_CRONOLOG_DATE_PATTERN);
     int maxHistory = 2;
     int simulatedNumberOfPeriods = 30;
@@ -152,12 +152,14 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   @Test
   public void checkCleanupForBasicDailyRollover() {
+    System.out.println("## checkCleanupForBasicDailyRollover");
     cp.maxHistory(6).simulatedNumberOfPeriods(30).startInactivity(10).numInactivityPeriods(1);
     generateDailyRolloverAndCheckFileCount(cp);
   }
 
   @Test
   public void checkCleanupForBasicDailyRolloverWithSizeCap() {
+    System.out.println("## checkCleanupForBasicDailyRolloverWithSizeCap");
     long bytesOutputPerPeriod = 15984;
     int sizeInUnitsOfBytesPerPeriod = 2;
 
@@ -181,6 +183,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   @Test
   public void checkCleanupForBasicDailyRolloverWithMaxSize() {
+    System.out.println("## checkCleanupForBasicDailyRolloverWithMaxSize");
     cp.maxHistory(6).simulatedNumberOfPeriods(70).startInactivity(30).numInactivityPeriods(1);
     generateDailyRolloverAndCheckFileCount(cp);
   }
@@ -190,18 +193,21 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
   // be conducted with daily rollover  not monthly
   @Test
   public void checkCleanupForDailyRollover_15Periods() {
+    System.out.println("## checkCleanupForDailyRollover_15Periods");
     cp.maxHistory(5).simulatedNumberOfPeriods(15).startInactivity(6).numInactivityPeriods(3);
     generateDailyRolloverAndCheckFileCount(cp);
   }
 
   @Test
   public void checkCleanupForDailyRolloverWithInactivity_30Periods() {
+    System.out.println("## checkCleanupForDailyRolloverWithInactivity_30Periods");
     cp.maxHistory(2).simulatedNumberOfPeriods(30).startInactivity(3).numInactivityPeriods(1);
     generateDailyRolloverAndCheckFileCount(cp);
   }
 
   @Test
   public void checkCleanupForDailyRolloverWithInactivity_10Periods() {
+    System.out.println("## checkCleanupForDailyRolloverWithInactivity_10Periods");
     this.currentTime = THU_2016_03_17_T_230330_CET;
     cp.maxHistory(6).simulatedNumberOfPeriods(10).startInactivity(2).numInactivityPeriods(2);
     generateDailyRolloverAndCheckFileCount(cp);
@@ -209,6 +215,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   @Test
   public void checkCleanupForDailyRolloverWithSecondPhase() {
+    System.out.println("## checkCleanupForDailyRolloverWithSecondPhase");
     slashCount = computeSlashCount(DAILY_DATE_PATTERN);
     int maxHistory = 5;
     String fileNamePattern = randomOutputDir + "clean-%d{" + DAILY_DATE_PATTERN + "}.txt";
@@ -225,6 +232,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   @Test
   public void dailySizeBasedRolloverWithoutCap() {
+    System.out.println("## dailySizeBasedRolloverWithoutCap");
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
     sizeAndTimeBasedFNATP.invocationGate = fixedRateInvocationGate;
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(10000));
@@ -238,6 +246,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   @Test
   public void dailyChronologSizeBasedRollover() {
+    System.out.println("## dailyChronologSizeBasedRollover");
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(10000));
     sizeAndTimeBasedFNATP.invocationGate = fixedRateInvocationGate;
@@ -251,6 +260,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   @Test
   public void dailyChronologSizeBasedRolloverWithSecondPhase() {
+    System.out.println("## dailyChronologSizeBasedRolloverWithSecondPhase");
     SizeAndTimeBasedFNATP<Object> sizeAndTimeBasedFNATP = new SizeAndTimeBasedFNATP<Object>();
     sizeAndTimeBasedFNATP.setMaxFileSize(new FileSize(10000));
     sizeAndTimeBasedFNATP.invocationGate = fixedRateInvocationGate;
@@ -344,7 +354,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     findAllDirsOrStringContainsFilesRecursively(dir, fileList, "clean");
     System.out.println("[checkFileCount] fileList:");
     fileList.stream().sorted().forEach(System.out::println);
-    assertEquals(expectedCount, fileList.size());
+    assertEquals("[checkFileCount] expectedCount=" + expectedCount + " saw=" + fileList, expectedCount, fileList.size());
   }
 
   private void checkFileCountAtMost(int expectedCount) {
@@ -354,7 +364,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     int fileListSize = fileList.size();
     System.out.println("[checkFileCountAtMost] fileList:");
     fileList.stream().sorted().forEach(System.out::println);
-    assertTrue("file list size " + fileListSize + ", expectedCount=" + expectedCount, fileListSize <= expectedCount);
+    assertTrue("file list size " + fileListSize + ", expectedCount=" + expectedCount + " saw=" + fileList, fileListSize <= expectedCount);
   }
 
   private int expectedCountWithoutFoldersWithInactivity(int maxHistory, int totalPeriods, int endOfInactivity) {
@@ -424,7 +434,7 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
 
   private void checkPatternCompliance(int expectedClassCount, String regex) {
     Set<String> set = findFilesByPatternClass(regex);
-    assertEquals(expectedClassCount, set.size());
+    assertEquals("[checkPatternCompliance] expectedClassCount=" + expectedClassCount + " saw=" + set, expectedClassCount, set.size());
   }
 
   private List<File> findFilesByPattern(String regex) {
@@ -453,6 +463,6 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     for (File f : fileList) {
       assertTrue(f.list().length >= 1);
     }
-    assertEquals(expectedClassCount, fileList.size());
+    assertEquals("[checkDirPatternCompliance] expectedClassCount=" + expectedClassCount + " saw=" + fileList, expectedClassCount, fileList.size());
   }
 }
