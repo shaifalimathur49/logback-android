@@ -342,6 +342,8 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findAllDirsOrStringContainsFilesRecursively(dir, fileList, "clean");
+    System.out.println("[checkFileCount] fileList:");
+    fileList.stream().sorted().forEach(System.out::println);
     assertEquals(expectedCount, fileList.size());
   }
 
@@ -350,7 +352,8 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     List<File> fileList = new ArrayList<File>();
     findAllDirsOrStringContainsFilesRecursively(dir, fileList, "clean");
     int fileListSize = fileList.size();
-
+    System.out.println("[checkFileCountAtMost] fileList:");
+    fileList.stream().sorted().forEach(System.out::println);
     assertTrue("file list size " + fileListSize + ", expectedCount=" + expectedCount, fileListSize <= expectedCount);
   }
 
@@ -428,12 +431,16 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findFilesInFolderRecursivelyByPatterMatch(dir, fileList, regex);
+    System.out.println("[findFilesByPattern] fileList:");
+    fileList.stream().sorted().forEach(System.out::println);
     return fileList;
   }
 
   private Set<String> findFilesByPatternClass(String regex) {
     List<File> fileList = findFilesByPattern(regex);
     Set<String> set = groupByClass(fileList, regex);
+    System.out.println("[findFilesByPatternClass] set:");
+    set.stream().sorted().forEach(System.out::println);
     return set;
   }
 
@@ -441,6 +448,8 @@ public class TimeBasedRollingWithArchiveRemoval_Test extends ScaffoldingForRolli
     File dir = new File(randomOutputDir);
     List<File> fileList = new ArrayList<File>();
     findAllFoldersInFolderRecursively(dir, fileList);
+    System.out.println("[checkDirPatternCompliance] fileList:");
+    fileList.stream().sorted().forEach(System.out::println);
     for (File f : fileList) {
       assertTrue(f.list().length >= 1);
     }
